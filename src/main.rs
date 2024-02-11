@@ -144,9 +144,17 @@ impl Food {
             food_pos,
         })
     }
-    fn new_position(&mut self){
+    fn new_position(&mut self, snake_array: &Vec<Vec<f32>>){
         let mut rng = thread_rng();
+        let mut valid = false;
+        while !valid{
         self.food_pos = vec![(rng.gen_range(1..GIRD_DIMENSION.0 as i32 - 1)) as f32,(rng.gen_range(1..GIRD_DIMENSION.1 as i32 - 1)) as f32];
+            for i in 0..=(snake_array.len()-1){
+                if self.food_pos != snake_array[i]{
+                    valid = true;
+                }
+            }
+        }
     }
     fn draw(&mut self, canvas:&mut graphics::Canvas){
         canvas.draw(&self.food_mesh,Vec2::new(Grid::gridposition(self.food_pos[0]),Grid::gridposition(self.food_pos[1])));
@@ -169,7 +177,7 @@ impl GameState{
 
     fn check_game_state(&mut self, pos_array: Vec<Vec<f32>>){
         let head = pos_array[0].clone();
-        for i in  1..pos_array.len()-1{
+        for i in  1..=(pos_array.len()-1){
             if head == pos_array[i]{
                 self.game_over = true;
                 break;
@@ -224,7 +232,7 @@ impl EventHandler for  Mainstate{
                         self.movment = Instant::now();
                         if self.snake.snake_array[0] == self.food.food_pos{
                             self.snake.eat_food(_ctx)?;
-                            self.food.new_position();
+                            self.food.new_position(&self.snake.snake_array);
                         };
                 }   
             }
