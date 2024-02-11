@@ -2,7 +2,7 @@ use std::cell::Cell;
 use std::time::{Duration, Instant};
 
 use ggez::filesystem::print_all;
-use ggez::graphics::{self, Canvas, Color, DrawMode, DrawParam, Mesh};
+use ggez::graphics::{self, Canvas, Color, DrawMode, DrawParam, Mesh, Rect};
 use ggez::event::{self, EventHandler};
 use ggez::{conf, Context, ContextBuilder, GameResult};
 use ggez::glam::Vec2;
@@ -37,7 +37,6 @@ fn main() ->GameResult{
 
 }
 struct Grid{
-
 }
 
 impl  Grid{
@@ -45,7 +44,7 @@ impl  Grid{
         let result = pos*CELL_SIZE;
         result
     }
-    
+
 }
 enum Direction {
     Up,
@@ -82,9 +81,6 @@ impl Snake{
         graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), graphics::Rect::new(0.0,0.0, CELL_SIZE, CELL_SIZE), graphics::Color::WHITE)?,
         ];
         let snake_direction = Direction:: Right;
-        println!("{:?}",snake_mesh.len());
-        println!("{:?}",snake_array.len());
-
         Ok(Self{
             snake_array, 
             snake_mesh,
@@ -95,10 +91,7 @@ impl Snake{
 
     fn eat_food(&mut self, ctx: &mut Context)->GameResult{
         let tail:Vec<f32> = self.snake_array[self.snake_array.len()-1].clone();
-        println!("{:?}",self.snake_array.len());
-        self.move_snake();
-
-        println!("{:?}",self.snake_array.len());        
+        self.move_snake();       
         let new_tail_mesh = graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), graphics::Rect::new( 0.0, 0.0, CELL_SIZE, CELL_SIZE), graphics::Color::WHITE)?;
         self.snake_array.push(tail); 
         self.snake_mesh.push(new_tail_mesh);
@@ -118,7 +111,6 @@ impl Snake{
 
     fn draw(&self, canvas:&mut graphics::Canvas){
         for i in 0..=(self.snake_array.len()-1) {
-
             canvas.draw(&self.snake_mesh[i], Vec2::new(Grid::gridposition(self.snake_array[i][0]),Grid::gridposition(self.snake_array[i][1])));
         }
     }
@@ -146,6 +138,9 @@ impl Food {
         let mut rng = thread_rng();
         self.food_pos = vec![(rng.gen_range(0..GIRD_DIMENSION.0 as i32 - 1)) as f32,(rng.gen_range(0..GIRD_DIMENSION.1 as i32 - 1)) as f32];
     }
+    fn draw(&mut self, canvas:&mut graphics::Canvas){
+        canvas.draw(&self.food_mesh,Vec2::new(Grid::gridposition(self.food_pos[0]),Grid::gridposition(self.food_pos[1])));
+    }
     
 }
 
@@ -153,6 +148,7 @@ struct Mainstate {
     snake: Snake,
     movment: Instant,
     food: Food,
+    border: Mesh,
 
 
 }
@@ -163,10 +159,12 @@ impl Mainstate{
         let snake = Snake::new(ctx)?;
         let movment: Instant = Instant::now(); 
         let food = Food::new(ctx)?;
+        let border = graphics::Mesh::new_rectangle(ctx, DrawMode::stroke(CELL_SIZE*2.0), Rect::new(0.0, 0.0, GIRD_DIMENSION.0*CELL_SIZE, GIRD_DIMENSION.1*CELL_SIZE), graphics::Color::GREEN)?;
         Ok(Mainstate{
             food,
             snake,
             movment,
+            border,
         })
     }   
 }
@@ -195,9 +193,11 @@ impl EventHandler for  Mainstate{
          let mut canvas = graphics::Canvas::from_frame(ctx, Color::BLACK);
         
         self.snake.draw(&mut canvas);
-        canvas.draw(&self.food.food_mesh,Vec2::new(Grid::gridposition(self.food.food_pos[0]),Grid::gridposition(self.food.food_pos[1])));
-         canvas.finish(ctx)?;
-         Ok(())
+        self.food.draw(&mut canvas);
+        canvas.draw(&self.border, DrawParam::default());
+    
+        canvas.finish(ctx)?;
+        Ok(())
      }
     
      fn key_down_event(
