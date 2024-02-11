@@ -1,8 +1,6 @@
-use std::cell::Cell;
 use std::time::{Duration, Instant};
 
-use ggez::filesystem::print_all;
-use ggez::graphics::{self, Canvas, Color, DrawMode, DrawParam, Mesh, Rect};
+use ggez::graphics::{self, Color, DrawMode, DrawParam, Mesh, Rect};
 use ggez::event::{self, EventHandler};
 use ggez::{conf, Context, ContextBuilder, GameResult};
 use ggez::glam::Vec2;
@@ -62,6 +60,17 @@ impl Direction {
             Direction::Right => vec![1.0, 0.0],
         }
     }
+    fn check_direction(dir: &Direction, keypress: ggez::input::keyboard::KeyCode) -> bool{
+        match (dir, keypress){
+            (Direction::Up, ggez::input::keyboard::KeyCode::S) => false,
+            (Direction::Down, ggez::input::keyboard::KeyCode::W) => false,
+            (Direction::Left, ggez::input::keyboard::KeyCode::D) => false,
+            (Direction::Right, ggez::input::keyboard::KeyCode::A) => false,
+            _ => {
+                true
+            }
+        }
+    }
 
 }
 
@@ -106,6 +115,7 @@ impl Snake{
             self.snake_array[i] = new_pos;
         }
         self.snake_array[0] = vec![self.snake_array[0][0]+movment[0],self.snake_array[0][1]+movment[1]];
+        
 
     }
 
@@ -127,7 +137,7 @@ struct Food{
 impl Food {
     fn new(ctx: &mut Context)->GameResult<Self>{
         let mut rng = thread_rng();
-        let food_pos = vec![(rng.gen_range(0..GIRD_DIMENSION.0 as i32 - 1)) as f32,(rng.gen_range(0..GIRD_DIMENSION.1 as i32 - 1)) as f32];
+        let food_pos = vec![(rng.gen_range(1..GIRD_DIMENSION.0 as i32 - 1)) as f32,(rng.gen_range(1..GIRD_DIMENSION.1 as i32 - 1)) as f32];
         let food_mesh = graphics::Mesh::new_rectangle(ctx, DrawMode::fill(), graphics::Rect::new(0.0,0.0,CELL_SIZE,CELL_SIZE), graphics::Color::RED)?;
         Ok(Self{
             food_mesh,
@@ -136,7 +146,7 @@ impl Food {
     }
     fn new_position(&mut self){
         let mut rng = thread_rng();
-        self.food_pos = vec![(rng.gen_range(0..GIRD_DIMENSION.0 as i32 - 1)) as f32,(rng.gen_range(0..GIRD_DIMENSION.1 as i32 - 1)) as f32];
+        self.food_pos = vec![(rng.gen_range(1..GIRD_DIMENSION.0 as i32 - 1)) as f32,(rng.gen_range(1..GIRD_DIMENSION.1 as i32 - 1)) as f32];
     }
     fn draw(&mut self, canvas:&mut graphics::Canvas){
         canvas.draw(&self.food_mesh,Vec2::new(Grid::gridposition(self.food_pos[0]),Grid::gridposition(self.food_pos[1])));
@@ -144,11 +154,42 @@ impl Food {
     
 }
 
+struct GameState{
+    game_over: bool,
+
+}
+
+impl GameState{
+    fn new() -> GameState{
+        let game_over = false;
+        GameState{
+            game_over
+        }
+    }
+
+    fn check_game_state(&mut self, pos_array: Vec<Vec<f32>>){
+        let head = pos_array[0].clone();
+        for i in  1..pos_array.len()-1{
+            if head == pos_array[i]{
+                self.game_over = true;
+                break;
+            }
+
+            }
+        if head.contains(&0.0) || head.contains(&39.0){
+            self.game_over = true;        
+        }
+
+    } 
+}
+
+
 struct Mainstate {
     snake: Snake,
     movment: Instant,
     food: Food,
     border: Mesh,
+    game_over: GameState,
 
 
 }
@@ -160,32 +201,39 @@ impl Mainstate{
         let movment: Instant = Instant::now(); 
         let food = Food::new(ctx)?;
         let border = graphics::Mesh::new_rectangle(ctx, DrawMode::stroke(CELL_SIZE*2.0), Rect::new(0.0, 0.0, GIRD_DIMENSION.0*CELL_SIZE, GIRD_DIMENSION.1*CELL_SIZE), graphics::Color::GREEN)?;
+        let game_over = GameState::new();
+        
         Ok(Mainstate{
             food,
             snake,
             movment,
             border,
+            game_over,
         })
     }   
 }
 
 impl EventHandler for  Mainstate{
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
-        let check:Option<Duration> = Instant::now().checked_duration_since(self.movment);
-        match check{
-            Some(duration) => {
-                if duration > Duration::from_millis(100){
-                    self.snake.move_snake();
-                    self.movment = Instant::now();
-                    if self.snake.snake_array[0] == self.food.food_pos{
-                        self.snake.eat_food(_ctx)?;
-                        self.food.new_position();
-                    };
-            }   
+        if !self.game_over.game_over{
+            let check:Option<Duration> = Instant::now().checked_duration_since(self.movment);
+            match check{
+                Some(duration) => {
+                    if duration > Duration::from_millis(100){
+                        self.snake.move_snake();
+                        self.movment = Instant::now();
+                        if self.snake.snake_array[0] == self.food.food_pos{
+                            self.snake.eat_food(_ctx)?;
+                            self.food.new_position();
+                        };
+                }   
             }
             None => {
             }
         }
+        let pos_array = self.snake.snake_array.clone();
+        self.game_over.check_game_state(pos_array);
+    }
          Ok(())
      }
  
@@ -208,14 +256,21 @@ impl EventHandler for  Mainstate{
          ) -> GameResult {
          match input.keycode{
             Some(KeyCode::W) => {
-                self.snake.snake_direction = Direction:: Up},
+                if Direction::check_direction(&self.snake.snake_direction, KeyCode::W){
+                self.snake.snake_direction = Direction:: Up}
+            },
             Some(KeyCode::S) => {
-                self.snake.snake_direction = Direction:: Down}
-            ,
+                if Direction::check_direction(&self.snake.snake_direction, KeyCode::S){
+                    self.snake.snake_direction = Direction:: Down}
+                },
             Some(KeyCode::A) =>{
-                 self.snake.snake_direction = Direction:: Left},
+                if Direction::check_direction(&self.snake.snake_direction, KeyCode::A){
+                    self.snake.snake_direction = Direction::Left}
+                },
             Some(KeyCode::D) =>{
-                 self.snake.snake_direction = Direction:: Right},
+                if Direction::check_direction(&self.snake.snake_direction, KeyCode::D){
+                    self.snake.snake_direction = Direction:: Right}
+                },
             _ => (),
          }
          Ok(())
