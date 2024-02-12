@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use ggez::graphics::{self, Color, DrawMode, DrawParam, Mesh, Rect};
+use ggez::graphics::{self, Color, DrawMode, DrawParam, Mesh, Rect, Text, TextFragment};
 use ggez::event::{self, EventHandler};
 use ggez::{conf, Context, ContextBuilder, GameResult};
 use ggez::glam::Vec2;
@@ -150,7 +150,7 @@ struct Food{
 impl Food {
     fn new(ctx: &mut Context)->GameResult<Self>{
         let mut rng = thread_rng();
-        let food_pos = vec![(rng.gen_range(1..GIRD_DIMENSION.0 as i32 - 1)) as f32,(rng.gen_range(1..GIRD_DIMENSION.1 as i32 - 1)) as f32];
+        let food_pos = vec![(GIRD_DIMENSION.0)/2.0+(GIRD_DIMENSION.0)/4.0,((GIRD_DIMENSION.1)/2.0)];
         let food_mesh = graphics::Mesh::new_rectangle(ctx, DrawMode::fill(), graphics::Rect::new(0.0,0.0,CELL_SIZE,CELL_SIZE), graphics::Color::RED)?;
         Ok(Self{
             food_mesh,
@@ -178,16 +178,23 @@ impl Food {
     
 }
 
+
+
 struct GameState{
     game_over: bool,
+    food_count: i32,
+
 
 }
 
 impl GameState{
     fn new() -> GameState{
         let game_over = false;
+        let food_count = 0;
+
         GameState{
-            game_over
+            game_over,
+            food_count,
         }
     }
 
@@ -216,7 +223,6 @@ struct Mainstate {
     game_over: GameState,
     valid_direction: Direction,
     board: Vec<Vec<f32>>,
-
 
 }
 
@@ -256,6 +262,7 @@ impl EventHandler for  Mainstate{
                         self.movment = Instant::now();
                         if self.snake.snake_array[0] == self.food.food_pos{
                             self.snake.eat_food(_ctx,)?;
+                            self.game_over.food_count +=1;
                             self.food.new_position(&self.snake.snake_array, &self.board);
                         };
                 }  
@@ -275,6 +282,7 @@ impl EventHandler for  Mainstate{
         self.snake.draw(&mut canvas);
         self.food.draw(&mut canvas);
         canvas.draw(&self.border, DrawParam::default());
+        canvas.draw(graphics::Text::new((self.game_over.food_count).to_string()).set_scale(24.0),Vec2::new(0.0,0.0));
     
         canvas.finish(ctx)?;
         Ok(())
