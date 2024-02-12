@@ -8,7 +8,7 @@ use ggez::input::keyboard::{KeyCode, KeyInput};
 use rand::{thread_rng, Rng};
 
 
-const GIRD_DIMENSION: (f32,f32) = (20.0,20.0);
+const GIRD_DIMENSION: (f32,f32) = (10.0,10.0);
 const CELL_SIZE: f32 = 30.0;
 
 
@@ -46,7 +46,7 @@ impl  Grid{
     fn get_grid()->Vec<Vec<f32>>{
         let mut grid = vec![];
         for i in 1..(GIRD_DIMENSION.0 as u32){
-            for j in 1..=(GIRD_DIMENSION.1 as u32){
+            for j in 1..=(GIRD_DIMENSION.1 as u32-1){
                 grid.push(vec![i as f32,j as f32]);
             }
         }
@@ -98,7 +98,7 @@ struct Snake{
 
 impl Snake{
     fn new(ctx: &mut Context) -> GameResult<Self>{
-        let snake_array = vec![vec![9.0,9.0],vec![8.0,9.0]];
+        let snake_array = vec![vec![GIRD_DIMENSION.0*1.0/2.0-1.0,GIRD_DIMENSION.1*1.0/2.0-1.0],vec![GIRD_DIMENSION.1*1.0/2.0-2.0,GIRD_DIMENSION.1*1.0/2.0-1.0]];
         let snake_mesh = vec![graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), graphics::Rect::new(0.0,0.0, CELL_SIZE, CELL_SIZE), graphics::Color::BLUE)?,
         graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), graphics::Rect::new(0.0,0.0, CELL_SIZE, CELL_SIZE), graphics::Color::WHITE)?,
         ];
@@ -149,8 +149,8 @@ struct Food{
 
 impl Food {
     fn new(ctx: &mut Context)->GameResult<Self>{
-        let mut rng = thread_rng();
-        let food_pos = vec![(GIRD_DIMENSION.0)/2.0+(GIRD_DIMENSION.0)/4.0,((GIRD_DIMENSION.1)/2.0)];
+        let rng = thread_rng();
+        let food_pos = vec![(GIRD_DIMENSION.0)/2.0+(GIRD_DIMENSION.0)/5.0,((GIRD_DIMENSION.1)/2.0)];
         let food_mesh = graphics::Mesh::new_rectangle(ctx, DrawMode::fill(), graphics::Rect::new(0.0,0.0,CELL_SIZE,CELL_SIZE), graphics::Color::RED)?;
         Ok(Self{
             food_mesh,
@@ -162,7 +162,7 @@ impl Food {
         let mut rng = thread_rng();
         let mut new_board = board.clone();
         for i in 0..snake_array.len(){
-            for j in 0..=new_board.len(){
+            for j in 0..new_board.len(){
                 if new_board[j] == snake_array[i]{
                     new_board.remove(j);
                     break;
@@ -207,7 +207,7 @@ impl GameState{
             }
 
             }
-        if head.contains(&0.0) || head.contains(&19.0){
+        if head.contains(&0.0) || head.contains(&GIRD_DIMENSION.0){
             self.game_over = true;        
         }
 
@@ -256,7 +256,7 @@ impl EventHandler for  Mainstate{
             let check:Option<Duration> = Instant::now().checked_duration_since(self.movment); //should be replaced by  fn check_update_time(&mut self, target_fps: u32) -> bool
             match check{
                 Some(duration) => {
-                    if duration > Duration::from_millis(100){
+                    if duration > Duration::from_millis(200){
                         self.snake.snake_direction = self.valid_direction;
                         self.snake.move_snake();
                         self.movment = Instant::now();
@@ -280,10 +280,10 @@ impl EventHandler for  Mainstate{
          let mut canvas = graphics::Canvas::from_frame(ctx, Color::BLACK);
         
         self.snake.draw(&mut canvas);
-        self.food.draw(&mut canvas);
+
         canvas.draw(&self.border, DrawParam::default());
         canvas.draw(graphics::Text::new((self.game_over.food_count).to_string()).set_scale(24.0),Vec2::new(0.0,0.0));
-    
+        self.food.draw(&mut canvas);
         canvas.finish(ctx)?;
         Ok(())
      }
