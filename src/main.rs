@@ -43,6 +43,15 @@ impl  Grid{
         let result = pos*CELL_SIZE;
         result
     }
+    fn get_grid()->Vec<Vec<f32>>{
+        let mut grid = vec![];
+        for i in 1..(GIRD_DIMENSION.0 as u32){
+            for j in 1..=(GIRD_DIMENSION.1 as u32){
+                grid.push(vec![i as f32,j as f32]);
+            }
+        }
+        grid
+    }
 
 }
 
@@ -148,20 +157,20 @@ impl Food {
             food_pos,
         })
     }
-    fn new_position(&mut self, snake_array: &Vec<Vec<f32>>){
+    fn new_position(&mut self, snake_array: &Vec<Vec<f32>>, board: &Vec<Vec<f32>>){
         //optimze
         let mut rng = thread_rng();
-        let mut valid = false;
-        while !valid{
-            valid = true;
-        self.food_pos = vec![(rng.gen_range(1..GIRD_DIMENSION.0 as i32 - 1)) as f32,(rng.gen_range(1..GIRD_DIMENSION.1 as i32 - 1)) as f32];
-            for i in 0..=(snake_array.len()-1){
-                if self.food_pos == snake_array[i]{
-                    valid = false;
+        let mut new_board = board.clone();
+        for i in 0..snake_array.len(){
+            for j in 0..=new_board.len(){
+                if new_board[j] == snake_array[i]{
+                    new_board.remove(j);
                     break;
                 }
-            }
+            }    
         }
+        self.food_pos = new_board[rng.gen_range(0..=new_board.len())].clone();
+
     }
     fn draw(&mut self, canvas:&mut graphics::Canvas){
         canvas.draw(&self.food_mesh,Vec2::new(Grid::gridposition(self.food_pos[0]),Grid::gridposition(self.food_pos[1])));
@@ -206,6 +215,7 @@ struct Mainstate {
     border: Mesh,
     game_over: GameState,
     valid_direction: Direction,
+    board: Vec<Vec<f32>>,
 
 
 }
@@ -219,6 +229,7 @@ impl Mainstate{
         let border = graphics::Mesh::new_rectangle(ctx, DrawMode::stroke(CELL_SIZE*2.0), Rect::new(0.0, 0.0, GIRD_DIMENSION.0*CELL_SIZE, GIRD_DIMENSION.1*CELL_SIZE), graphics::Color::GREEN)?;
         let game_over = GameState::new();
         let valid_direction = snake.snake_direction;
+        let board = Grid::get_grid();
 
         Ok(Mainstate{
             food,
@@ -227,6 +238,7 @@ impl Mainstate{
             border,
             game_over,
             valid_direction,
+            board,
         })
     }   
 }
@@ -243,8 +255,8 @@ impl EventHandler for  Mainstate{
                         self.snake.move_snake();
                         self.movment = Instant::now();
                         if self.snake.snake_array[0] == self.food.food_pos{
-                            self.snake.eat_food(_ctx)?;
-                            self.food.new_position(&self.snake.snake_array);
+                            self.snake.eat_food(_ctx,)?;
+                            self.food.new_position(&self.snake.snake_array, &self.board);
                         };
                 }  
                  
