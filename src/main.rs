@@ -8,11 +8,12 @@ use ggez::input::keyboard::{KeyCode, KeyInput};
 use rand::{thread_rng, Rng};
 
 
-const GIRD_DIMENSION: (f32,f32) = (40.0,40.0);
-const CELL_SIZE: f32 = 10.0;
+const GIRD_DIMENSION: (f32,f32) = (20.0,20.0);
+const CELL_SIZE: f32 = 30.0;
 
 
 //kodet under b8 xxv11 Orange Orangutan
+
 
 
 
@@ -44,12 +45,15 @@ impl  Grid{
     }
 
 }
+
+#[derive(Copy, Clone)]
 enum Direction {
     Up,
     Down,
     Left,
     Right,
 }
+
 
 impl Direction {
     fn convert_dir(dir: &Direction) -> Vec<f32> {
@@ -71,8 +75,8 @@ impl Direction {
             }
         }
     }
-
 }
+
 
 
 
@@ -85,8 +89,8 @@ struct Snake{
 
 impl Snake{
     fn new(ctx: &mut Context) -> GameResult<Self>{
-        let snake_array = vec![vec![19.0,19.0],vec![18.0,19.0]];
-        let snake_mesh = vec![graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), graphics::Rect::new(0.0,0.0, CELL_SIZE, CELL_SIZE), graphics::Color::WHITE)?,
+        let snake_array = vec![vec![9.0,9.0],vec![8.0,9.0]];
+        let snake_mesh = vec![graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), graphics::Rect::new(0.0,0.0, CELL_SIZE, CELL_SIZE), graphics::Color::BLUE)?,
         graphics::Mesh::new_rectangle(ctx, graphics::DrawMode::fill(), graphics::Rect::new(0.0,0.0, CELL_SIZE, CELL_SIZE), graphics::Color::WHITE)?,
         ];
         let snake_direction = Direction:: Right;
@@ -145,13 +149,16 @@ impl Food {
         })
     }
     fn new_position(&mut self, snake_array: &Vec<Vec<f32>>){
+        //optimze
         let mut rng = thread_rng();
         let mut valid = false;
         while !valid{
+            valid = true;
         self.food_pos = vec![(rng.gen_range(1..GIRD_DIMENSION.0 as i32 - 1)) as f32,(rng.gen_range(1..GIRD_DIMENSION.1 as i32 - 1)) as f32];
             for i in 0..=(snake_array.len()-1){
-                if self.food_pos != snake_array[i]{
-                    valid = true;
+                if self.food_pos == snake_array[i]{
+                    valid = false;
+                    break;
                 }
             }
         }
@@ -184,7 +191,7 @@ impl GameState{
             }
 
             }
-        if head.contains(&0.0) || head.contains(&39.0){
+        if head.contains(&0.0) || head.contains(&19.0){
             self.game_over = true;        
         }
 
@@ -198,6 +205,7 @@ struct Mainstate {
     food: Food,
     border: Mesh,
     game_over: GameState,
+    valid_direction: Direction,
 
 
 }
@@ -210,37 +218,41 @@ impl Mainstate{
         let food = Food::new(ctx)?;
         let border = graphics::Mesh::new_rectangle(ctx, DrawMode::stroke(CELL_SIZE*2.0), Rect::new(0.0, 0.0, GIRD_DIMENSION.0*CELL_SIZE, GIRD_DIMENSION.1*CELL_SIZE), graphics::Color::GREEN)?;
         let game_over = GameState::new();
-        
+        let valid_direction = snake.snake_direction;
+
         Ok(Mainstate{
             food,
             snake,
             movment,
             border,
             game_over,
+            valid_direction,
         })
     }   
 }
 
 impl EventHandler for  Mainstate{
+    
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
         if !self.game_over.game_over{
-            let check:Option<Duration> = Instant::now().checked_duration_since(self.movment);
+            let check:Option<Duration> = Instant::now().checked_duration_since(self.movment); //should be replaced by  fn check_update_time(&mut self, target_fps: u32) -> bool
             match check{
                 Some(duration) => {
                     if duration > Duration::from_millis(100){
+                        self.snake.snake_direction = self.valid_direction;
                         self.snake.move_snake();
                         self.movment = Instant::now();
                         if self.snake.snake_array[0] == self.food.food_pos{
                             self.snake.eat_food(_ctx)?;
                             self.food.new_position(&self.snake.snake_array);
                         };
-                }   
+                }  
+                 
             }
             None => {
             }
         }
-        let pos_array = self.snake.snake_array.clone();
-        self.game_over.check_game_state(pos_array);
+        self.game_over.check_game_state(self.snake.snake_array.clone());
     }
          Ok(())
      }
@@ -265,24 +277,25 @@ impl EventHandler for  Mainstate{
          match input.keycode{
             Some(KeyCode::W) => {
                 if Direction::check_direction(&self.snake.snake_direction, KeyCode::W){
-                self.snake.snake_direction = Direction:: Up}
+                self.valid_direction = Direction:: Up}
             },
             Some(KeyCode::S) => {
                 if Direction::check_direction(&self.snake.snake_direction, KeyCode::S){
-                    self.snake.snake_direction = Direction:: Down}
+                    self.valid_direction = Direction:: Down}
                 },
             Some(KeyCode::A) =>{
                 if Direction::check_direction(&self.snake.snake_direction, KeyCode::A){
-                    self.snake.snake_direction = Direction::Left}
+                    self.valid_direction = Direction::Left}
                 },
             Some(KeyCode::D) =>{
                 if Direction::check_direction(&self.snake.snake_direction, KeyCode::D){
-                    self.snake.snake_direction = Direction:: Right}
+                    self.valid_direction = Direction:: Right}
                 },
             _ => (),
          }
          Ok(())
      }
+}
  
- }
+
  
