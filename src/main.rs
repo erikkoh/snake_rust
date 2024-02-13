@@ -1,6 +1,7 @@
 use std::time::{Duration, Instant};
+use std::vec;
 
-use ggez::graphics::{self, Color, DrawMode, DrawParam, Mesh, Rect, Text, TextFragment};
+use ggez::graphics::{self, Canvas, Color, DrawMode, DrawParam, Image, Mesh, Rect, Text, TextFragment};
 use ggez::event::{self, EventHandler};
 use ggez::{conf, Context, ContextBuilder, GameResult};
 use ggez::glam::Vec2;
@@ -214,6 +215,34 @@ impl GameState{
     } 
 }
 
+struct Button{
+    button_bouds: Vec<Vec<f32>>,
+    button_cliked: bool,
+    button_render: bool,
+
+}
+
+impl Button{
+    fn new(size: f32, pos: Vec<f32>) -> GameResult<Button>{
+        let button_bouds = vec![vec![pos[0], pos[1]], vec![pos[1] + size, pos [1] + size]];
+        let button_cliked = false;
+        let button_render = false;
+        Ok((Button{
+            button_bouds,
+            button_cliked,
+            button_render,
+        }))
+    }
+    fn new_play_button_mesh(ctx: &mut Context)->GameResult<Image>{
+        let button_image = graphics::Image::from_path(ctx, "/playbutton.png")?;
+        Ok(button_image)
+
+    }
+
+    fn draw(&mut self, button_image: Image, ctx: &mut Context, mut canvas:Canvas){
+        canvas.draw(&button_image, Vec2::new(Grid::gridposition(self.button_bouds[0][0]),Grid::gridposition(self.button_bouds[0][1])));
+    }
+}
 
 struct Mainstate {
     snake: Snake,
