@@ -6,10 +6,10 @@ use ggez::event::{self, EventHandler};
 use ggez::{conf, Context, ContextBuilder, GameResult};
 use ggez::glam::Vec2;
 use ggez::input::keyboard::{KeyCode, KeyInput};
-use rand::{thread_rng, Rng};
+use rand::{thread_rng, Error, Rng};
 
 
-const GIRD_DIMENSION: (f32,f32) = (10.0,10.0);
+const GIRD_DIMENSION: (f32,f32) = (20.0,20.0);
 const CELL_SIZE: f32 = 30.0;
 
 
@@ -57,12 +57,15 @@ impl  Grid{
 }
 
 #[derive(Copy, Clone)]
+#[derive(PartialEq)]
+#[derive(Debug)]
 enum Direction {
     Up,
     Down,
     Left,
     Right,
 }
+
 
 
 impl Direction {
@@ -252,7 +255,7 @@ struct Mainstate {
     food: Food,
     border: Mesh,
     game_over: GameState,
-    valid_direction: Direction,
+    valid_direction: Vec<Direction>,
     board: Vec<Vec<f32>>,
 
 }
@@ -265,7 +268,7 @@ impl Mainstate{
         let food = Food::new(ctx)?;
         let border = graphics::Mesh::new_rectangle(ctx, DrawMode::stroke(CELL_SIZE*2.0), Rect::new(0.0, 0.0, GIRD_DIMENSION.0*CELL_SIZE, GIRD_DIMENSION.1*CELL_SIZE), graphics::Color::GREEN)?;
         let game_over = GameState::new();
-        let valid_direction = snake.snake_direction;
+        let valid_direction = vec![snake.snake_direction];
         let board = Grid::get_grid();
 
         Ok(Mainstate{
@@ -288,7 +291,10 @@ impl EventHandler for  Mainstate{
             match check{
                 Some(duration) => {
                     if duration > Duration::from_millis(200){
-                        self.snake.snake_direction = self.valid_direction;
+                        if self.valid_direction.len() > 1 && self.snake.snake_direction != self.valid_direction[1]{
+                            self.snake.snake_direction = self.valid_direction[1];
+                            self.valid_direction.remove(0);
+                        }
                         self.snake.move_snake();
                         self.movment = Instant::now();
                         if self.snake.snake_array[0] == self.food.food_pos{
@@ -325,28 +331,38 @@ impl EventHandler for  Mainstate{
              input: KeyInput,
              _repeated: bool,
          ) -> GameResult {
+            let last_element = self.valid_direction.len();
          match input.keycode{
             Some(KeyCode::W) => {
-                if Direction::check_direction(&self.snake.snake_direction, KeyCode::W){
-                self.valid_direction = Direction:: Up}
+                if Direction::check_direction(&self.valid_direction[last_element-1], KeyCode::W){
+                self.valid_direction.push(Direction::Up);
+                }
             },
             Some(KeyCode::S) => {
-                if Direction::check_direction(&self.snake.snake_direction, KeyCode::S){
-                    self.valid_direction = Direction:: Down}
+                if Direction::check_direction(&self.valid_direction[last_element-1], KeyCode::S){
+                    self.valid_direction.push(Direction::Down);
+
+                }
                 },
             Some(KeyCode::A) =>{
-                if Direction::check_direction(&self.snake.snake_direction, KeyCode::A){
-                    self.valid_direction = Direction::Left}
+                if Direction::check_direction(&&self.valid_direction[last_element-1], KeyCode::A){
+                    self.valid_direction.push(Direction::Left);        
+                }
                 },
             Some(KeyCode::D) =>{
-                if Direction::check_direction(&self.snake.snake_direction, KeyCode::D){
-                    self.valid_direction = Direction:: Right}
+                if Direction::check_direction(&self.valid_direction[last_element-1], KeyCode::D){
+                    self.valid_direction.push( Direction::Right);
+                }
                 },
             _ => (),
+
          }
-         Ok(())
+        Ok(())
+
      }
-}
+
+
+        }
  
 
  
