@@ -45,9 +45,9 @@ impl  Grid{
         result
     }
     fn get_grid()->Vec<Vec<f32>>{
-        let mut grid = vec![];
+        let mut grid: Vec<Vec<f32>> = vec![];
         for i in 1..(GIRD_DIMENSION.0 as u32){
-            for j in 1..=(GIRD_DIMENSION.1 as u32-1){
+            for j in 1..=(GIRD_DIMENSION.1 as u32-2){
                 grid.push(vec![i as f32,j as f32]);
             }
         }
@@ -170,7 +170,9 @@ impl Food {
                 }
             }    
         }
-        self.food_pos = new_board[rng.gen_range(0..=new_board.len())].clone();
+        let new_pos: Vec<f32> = new_board[rng.gen_range(0..new_board.len())].clone();
+        self.food_pos = new_pos;
+
 
     }
     fn draw(&mut self, canvas:&mut graphics::Canvas){
@@ -208,7 +210,7 @@ impl GameState{
             }
 
             }
-        if head.contains(&0.0) || head.contains(&GIRD_DIMENSION.0){
+        if head.contains(&0.0) || head.contains(&(GIRD_DIMENSION.0-1.0)){
             self.game_over = true;        
         }
 
