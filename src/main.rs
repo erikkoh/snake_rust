@@ -189,6 +189,7 @@ impl Food {
 struct GameState{
     game_over: bool,
     food_count: i32,
+    game_start: bool,
 
 
 }
@@ -196,11 +197,14 @@ struct GameState{
 impl GameState{
     fn new() -> GameState{
         let game_over = false;
+        let game_start = false;
         let food_count = 0;
+
 
         GameState{
             game_over,
             food_count,
+            game_start,
         }
     }
 
@@ -222,30 +226,37 @@ impl GameState{
 
 struct Button{
     button_bouds: Vec<Vec<f32>>,
-    button_cliked: bool,
     button_render: bool,
+    button_image: Image
 
 }
 
 impl Button{
-    fn new(size: f32, pos: Vec<f32>) -> GameResult<Button>{
+    fn new(size: f32, pos: Vec<f32>, button_type: &str, ctx: &mut Context ) -> GameResult<Self>{
         let button_bouds = vec![vec![pos[0], pos[1]], vec![pos[1] + size, pos [1] + size]];
-        let button_cliked = false;
         let button_render = false;
-        Ok((Button{
+        let button_image: Image = graphics::Image::from_path(ctx, "/playbutton.png")?;
+        // let button_image: Mesh =  graphics::Mesh::new_rectangle(ctx, DrawMode::fill(),Rect::new(0.0, 0.0, 60.0, 60.0) ,graphics::Color::RED )?;        
+        
+        // match button_type{
+        //     "playbutton" => {
+        //         let button_image = graphics::Image::from_path(ctx, "/playbutton.png")?;  
+        //     }
+        //     _ => {
+        //         println!("not a valid button type")
+        //     }
+        // }
+
+
+        Ok(Self{
             button_bouds,
-            button_cliked,
             button_render,
-        }))
-    }
-    fn new_play_button_mesh(ctx: &mut Context)->GameResult<Image>{
-        let button_image = graphics::Image::from_path(ctx, "/playbutton.png")?;
-        Ok(button_image)
-
+            button_image,
+        })
     }
 
-    fn draw(&mut self, button_image: Image, ctx: &mut Context, mut canvas:Canvas){
-        canvas.draw(&button_image, Vec2::new(Grid::gridposition(self.button_bouds[0][0]),Grid::gridposition(self.button_bouds[0][1])));
+    fn draw(&mut self, canvas: &mut graphics::Canvas){
+        canvas.draw(&self.button_image, DrawParam::new().scale([4.0,4.0]).z(1));
     }
 }
 
@@ -254,9 +265,10 @@ struct Mainstate {
     movment: Instant,
     food: Food,
     border: Mesh,
-    game_over: GameState,
+    game_state: GameState,
     valid_direction: Vec<Direction>,
     board: Vec<Vec<f32>>,
+    start_button: Button,
 
 }
 
@@ -267,18 +279,20 @@ impl Mainstate{
         let movment: Instant = Instant::now(); 
         let food = Food::new(ctx)?;
         let border = graphics::Mesh::new_rectangle(ctx, DrawMode::stroke(CELL_SIZE*2.0), Rect::new(0.0, 0.0, GIRD_DIMENSION.0*CELL_SIZE, GIRD_DIMENSION.1*CELL_SIZE), graphics::Color::GREEN)?;
-        let game_over = GameState::new();
+        let game_state = GameState::new();
         let valid_direction = vec![snake.snake_direction];
         let board = Grid::get_grid();
+        let start_button = Button::new(4.0, vec![10.0,10.0], "playbutton", ctx)?;
 
         Ok(Mainstate{
             food,
             snake,
             movment,
             border,
-            game_over,
+            game_state,
             valid_direction,
             board,
+            start_button,
         })
     }   
 }
@@ -286,7 +300,7 @@ impl Mainstate{
 impl EventHandler for  Mainstate{
     
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
-        if !self.game_over.game_over{
+        if !self.game_state.game_over && self.game_state.game_start{
             let check:Option<Duration> = Instant::now().checked_duration_since(self.movment); //should be replaced by  fn check_update_time(&mut self, target_fps: u32) -> bool
             match check{
                 Some(duration) => {
@@ -299,7 +313,7 @@ impl EventHandler for  Mainstate{
                         self.movment = Instant::now();
                         if self.snake.snake_array[0] == self.food.food_pos{
                             self.snake.eat_food(_ctx,)?;
-                            self.game_over.food_count +=1;
+                            self.game_state.food_count +=1;
                             self.food.new_position(&self.snake.snake_array, &self.board);
                         };
                 }  
@@ -308,23 +322,47 @@ impl EventHandler for  Mainstate{
             None => {
             }
         }
-        self.game_over.check_game_state(self.snake.snake_array.clone());
+        self.game_state.check_game_state(self.snake.snake_array.clone());
     }
          Ok(())
      }
  
+
+
      fn draw(&mut self, ctx: &mut Context) -> GameResult {
          let mut canvas = graphics::Canvas::from_frame(ctx, Color::BLACK);
         
+        self.start_button.draw(&mut canvas);
+
         self.snake.draw(&mut canvas);
 
+
         canvas.draw(&self.border, DrawParam::default());
-        canvas.draw(graphics::Text::new((self.game_over.food_count).to_string()).set_scale(24.0),Vec2::new(0.0,0.0));
+        canvas.draw(graphics::Text::new((self.game_state.food_count).to_string()).set_scale(24.0),Vec2::new(0.0,0.0));
         self.food.draw(&mut canvas);
         canvas.finish(ctx)?;
         Ok(())
      }
     
+    fn mouse_button_down_event(
+            &mut self,
+            _ctx: &mut Context,
+            _button: event::MouseButton,
+            _x: f32,
+            _y: f32,
+        ) -> GameResult{
+            let bottum_value = vec![Grid::gridposition(self.start_button.button_bouds[0][0]),Grid::gridposition(self.start_button.button_bouds[0][1])];
+            let top_value = vec![Grid::gridposition(self.start_button.button_bouds[1][0]),Grid::gridposition(self.start_button.button_bouds[1][1])];
+            let click = vec![_x,_y];
+            println!("{:?}",bottum_value);
+            println!("{:?}",click);
+            if bottum_value <= click && click <= top_value{
+                self.game_state.game_start= true;
+                println!("{:?}",self.game_state.game_start);
+            }
+            Ok(())
+        } 
+
      fn key_down_event(
              &mut self,
              _ctx: &mut Context,
@@ -362,7 +400,7 @@ impl EventHandler for  Mainstate{
      }
 
 
-        }
+    }
  
 
  
