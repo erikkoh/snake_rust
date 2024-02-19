@@ -46,8 +46,8 @@ impl  Grid{
     }
     fn get_grid()->Vec<Vec<f32>>{
         let mut grid: Vec<Vec<f32>> = vec![];
-        for i in 1..(GIRD_DIMENSION.0 as u32){
-            for j in 1..=(GIRD_DIMENSION.1 as u32-2){
+        for i in 1..(GIRD_DIMENSION.0 as u32-1){
+            for j in 1..(GIRD_DIMENSION.1 as u32-1){
                 grid.push(vec![i as f32,j as f32]);
             }
         }
@@ -162,7 +162,6 @@ impl Food {
         })
     }
     fn new_position(&mut self, snake_array: &Vec<Vec<f32>>, board: &Vec<Vec<f32>>){
-        //optimze
         let mut rng = thread_rng();
         let mut new_board = board.clone();
         for i in 0..snake_array.len(){
@@ -224,6 +223,7 @@ impl GameState{
     } 
 }
 
+
 struct Button{
     button_bouds: Vec<Vec<f32>>,
     button_render: bool,
@@ -234,7 +234,8 @@ struct Button{
 impl Button{
     fn new(size: f32, pos: Vec<f32>, button_type: &str, ctx: &mut Context ) -> GameResult<Self>{
         let button_bouds = vec![vec![pos[0], pos[1]], vec![pos[1] + size, pos [1] + size]];
-        let button_render = false;
+        let button_render = true;
+        let button_size = size;
         let button_image: Image = graphics::Image::from_path(ctx, "/playbutton.png")?;
         // let button_image: Mesh =  graphics::Mesh::new_rectangle(ctx, DrawMode::fill(),Rect::new(0.0, 0.0, 60.0, 60.0) ,graphics::Color::RED )?;        
         
@@ -255,8 +256,19 @@ impl Button{
         })
     }
 
+    fn get_buttom_image(button_type: str)->Image{
+        match type{
+            "playbutton"
+                let button_image: Image = graphics::Image::from_path(ctx, "/playbutton.png")?;    
+        }
+        let button_image: Image = graphics::Image::from_path(ctx, "/playbutton.png")?;
+    }
+
     fn draw(&mut self, canvas: &mut graphics::Canvas){
-        canvas.draw(&self.button_image, DrawParam::new().scale([4.0,4.0]).z(1));
+        if self.button_render {
+            canvas.draw(&self.button_image, DrawParam::new().dest(Vec2::new(Grid::gridposition(self.button_bouds[0][0]),Grid::gridposition(self.button_bouds[0][1]))).z(1).scale([self.button_size,self.button_size]));
+    
+        }
     }
 }
 
@@ -300,12 +312,12 @@ impl Mainstate{
 impl EventHandler for  Mainstate{
     
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
-        if !self.game_state.game_over && self.game_state.game_start{
+        if !self.game_state.game_over{
             let check:Option<Duration> = Instant::now().checked_duration_since(self.movment); //should be replaced by  fn check_update_time(&mut self, target_fps: u32) -> bool
             match check{
                 Some(duration) => {
                     if duration > Duration::from_millis(200){
-                        if self.valid_direction.len() > 1 && self.snake.snake_direction != self.valid_direction[1]{
+                        if self.valid_direction.len() > 1 {
                             self.snake.snake_direction = self.valid_direction[1];
                             self.valid_direction.remove(0);
                         }
@@ -354,11 +366,8 @@ impl EventHandler for  Mainstate{
             let bottum_value = vec![Grid::gridposition(self.start_button.button_bouds[0][0]),Grid::gridposition(self.start_button.button_bouds[0][1])];
             let top_value = vec![Grid::gridposition(self.start_button.button_bouds[1][0]),Grid::gridposition(self.start_button.button_bouds[1][1])];
             let click = vec![_x,_y];
-            println!("{:?}",bottum_value);
-            println!("{:?}",click);
             if bottum_value <= click && click <= top_value{
                 self.game_state.game_start= true;
-                println!("{:?}",self.game_state.game_start);
             }
             Ok(())
         } 
