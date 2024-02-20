@@ -227,8 +227,8 @@ impl GameState{
 struct Button{
     button_bouds: Vec<Vec<f32>>,
     button_render: bool,
-    button_image: Image
-
+    button_image: Image,
+    button_size: f32,
 }
 
 impl Button{
@@ -253,16 +253,10 @@ impl Button{
             button_bouds,
             button_render,
             button_image,
+            button_size,
         })
     }
 
-    fn get_buttom_image(button_type: str)->Image{
-        match type{
-            "playbutton"
-                let button_image: Image = graphics::Image::from_path(ctx, "/playbutton.png")?;    
-        }
-        let button_image: Image = graphics::Image::from_path(ctx, "/playbutton.png")?;
-    }
 
     fn draw(&mut self, canvas: &mut graphics::Canvas){
         if self.button_render {
