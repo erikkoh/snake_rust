@@ -312,6 +312,7 @@ impl EventHandler for  Mainstate{
                 Some(duration) => {
                     if duration > Duration::from_millis(200){
                         if self.valid_direction.len() > 1 {
+
                             self.snake.snake_direction = self.valid_direction[1];
                             self.valid_direction.remove(0);
                         }
