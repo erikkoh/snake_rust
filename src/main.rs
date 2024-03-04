@@ -79,10 +79,10 @@ impl Direction {
     }
     fn check_direction(dir: &Direction, keypress: ggez::input::keyboard::KeyCode) -> bool{
         match (dir, keypress){
-            (Direction::Up, ggez::input::keyboard::KeyCode::S) => false,
-            (Direction::Down, ggez::input::keyboard::KeyCode::W) => false,
-            (Direction::Left, ggez::input::keyboard::KeyCode::D) => false,
-            (Direction::Right, ggez::input::keyboard::KeyCode::A) => false,
+            (Direction::Up, ggez::input::keyboard::KeyCode::S | ggez::input::keyboard::KeyCode::W) => false,
+            (Direction::Down, ggez::input::keyboard::KeyCode::W | ggez::input::keyboard::KeyCode::S) => false,
+            (Direction::Left, ggez::input::keyboard::KeyCode::D | ggez::input::keyboard::KeyCode::A) => false,
+            (Direction::Right, ggez::input::keyboard::KeyCode::A | ggez::input::keyboard::KeyCode::D) => false,
             _ => {
                 true
             }
@@ -352,7 +352,7 @@ impl EventHandler for  Mainstate{
             let check:Option<Duration> = Instant::now().checked_duration_since(self.movment); //should be replaced by  fn check_update_time(&mut self, target_fps: u32) -> bool
             match check{
                 Some(duration) => {
-                    if duration > Duration::from_millis(100){
+                    if duration > Duration::from_millis(50){
                         if self.valid_direction.len() > 1 {
 
                             self.snake.snake_direction = self.valid_direction[1];
@@ -442,9 +442,11 @@ impl EventHandler for  Mainstate{
                 Some(KeyCode::R) | Some(KeyCode::Space) => {
                     self.reset(_ctx);
                 }
+            Some(KeyCode::Escape) => {
+                _ctx.request_quit();
+            }
             _ => (),
          }
-         println!("{:?}",self.valid_direction);
         Ok(())
 
      }
