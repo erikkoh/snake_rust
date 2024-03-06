@@ -5,12 +5,10 @@ extern crate good_web_game as ggez;
 
 use ggez::cgmath::Point2;
 use ggez::event::{self, EventHandler};
-use ggez::graphics::{
-    self, Color, DrawMode, DrawParam, Mesh, Rect,
-};
+use ggez::graphics::{self, Color, DrawMode, DrawParam, Mesh, Rect};
 use ggez::input::keyboard::{KeyCode, KeyMods};
 use ggez::timer::check_update_time;
-use ggez::{ Context, GameResult};
+use ggez::{Context, GameResult};
 
 
 const GIRD_DIMENSION: (f32, f32) = (20.0, 20.0);
@@ -166,7 +164,7 @@ impl Snake {
 
     fn draw(&self, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) {
         for i in 0..=(self.snake_array.len() - 1) {
-            graphics::draw(
+            let error = graphics::draw(
                 ctx,
                 quad_ctx,
                 &self.snake_mesh[i],
@@ -175,6 +173,10 @@ impl Snake {
                     Grid::gridposition(self.snake_array[i][1]),
                 )),
             );
+            match error {
+                Ok(()) => {()},
+                Err(_) => {panic!("Problem with drawing snake")}
+            }
         }
     }
 
@@ -248,7 +250,7 @@ impl Food {
         self.food_pos = new_pos;
     }
     fn draw(&mut self, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) {
-        graphics::draw(
+        let error = graphics::draw(
             ctx,
             quad_ctx,
             &self.food_mesh,
@@ -257,6 +259,12 @@ impl Food {
                 Grid::gridposition(self.food_pos[1]),
             )),
         );
+        match error {
+            Ok(()) => {()},
+            Err(_) => {panic!("Problem with drawing food")}
+            
+        }
+
     }
 
     fn reset(&mut self) {
@@ -370,10 +378,10 @@ impl Mainstate {
             quad_ctx,
             DrawMode::stroke(CELL_SIZE),
             Rect::new(
-                CELL_SIZE/2.0,
-                CELL_SIZE/2.0,
-                (GIRD_DIMENSION.0 - 1.0 )* CELL_SIZE,
-                (GIRD_DIMENSION.1 - 1.0)* CELL_SIZE,
+                CELL_SIZE / 2.0,
+                CELL_SIZE / 2.0,
+                (GIRD_DIMENSION.0 - 1.0) * CELL_SIZE,
+                (GIRD_DIMENSION.1 - 1.0) * CELL_SIZE,
             ),
             graphics::Color::GREEN,
         )?;
@@ -405,7 +413,11 @@ impl Mainstate {
         })
     }
     fn reset(&mut self, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) {
-        self.snake.reset(ctx, quad_ctx);
+        let test_reset = self.snake.reset(ctx, quad_ctx);
+        match test_reset {
+            Ok(()) => {()},
+            Err(_) => {panic!("Problem with reseting snake")}
+        }
         self.food.reset();
         self.valid_direction = vec![self.snake.snake_direction];
         self.game_state.reset();
@@ -415,28 +427,28 @@ impl Mainstate {
 impl EventHandler for Mainstate {
     fn update(&mut self, _ctx: &mut Context, _quad_ctx: &mut event::GraphicsContext) -> GameResult {
         if check_update_time(_ctx, 10) {
-        if !self.game_state.game_over && self.game_state.game_start {
-            // let check: Option<Duration> = Instant::now().checked_duration_since(self.movment); //should be replaced by  fn check_update_time(&mut self, target_fps: u32) -> bool
+            if !self.game_state.game_over && self.game_state.game_start {
+                // let check: Option<Duration> = Instant::now().checked_duration_since(self.movment); //should be replaced by  fn check_update_time(&mut self, target_fps: u32) -> bool
 
-                    // if duration > Duration::from_millis(50) {
-                        if self.valid_direction.len() > 1 {
-                            self.snake.snake_direction = self.valid_direction[1];
-                            self.valid_direction.remove(0);
-                        }
-                        self.snake.move_snake();
-                        // self.movment = Instant::now();
-                        if self.snake.snake_array[0] == self.food.food_pos {
-                            self.snake.eat_food(_ctx, _quad_ctx)?;
-                            self.game_state.food_count += 1;
-                            self.food.new_position(&self.snake.snake_array, &self.board);
-                        // };
-                    }
+                // if duration > Duration::from_millis(50) {
+                if self.valid_direction.len() > 1 {
+                    self.snake.snake_direction = self.valid_direction[1];
+                    self.valid_direction.remove(0);
+                }
+                self.snake.move_snake();
+                // self.movment = Instant::now();
+                if self.snake.snake_array[0] == self.food.food_pos {
+                    self.snake.eat_food(_ctx, _quad_ctx)?;
+                    self.game_state.food_count += 1;
+                    self.food.new_position(&self.snake.snake_array, &self.board);
+                    // };
                 }
             }
-            self.game_state
-                .check_game_state(self.snake.snake_array.clone());
-            Ok(())
         }
+        self.game_state
+            .check_game_state(self.snake.snake_array.clone());
+        Ok(())
+    }
 
     fn draw(&mut self, ctx: &mut Context, _quad_ctx: &mut event::GraphicsContext) -> GameResult {
         graphics::clear(ctx, _quad_ctx, Color::BLACK);
@@ -449,7 +461,9 @@ impl EventHandler for Mainstate {
         graphics::draw(
             ctx,
             _quad_ctx,
-            &graphics::Text::new("Score: ".to_owned() + (&(self.game_state.food_count).to_string())),
+            &graphics::Text::new(
+                "Score: ".to_owned() + (&(self.game_state.food_count).to_string()),
+            ),
             DrawParam::default(),
         )?;
         self.food.draw(ctx, _quad_ctx);
