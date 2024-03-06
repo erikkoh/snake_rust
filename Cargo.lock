@@ -378,7 +378,7 @@ dependencies = [
 [[package]]
 name = "good-web-game"
 version = "0.6.0"
-source = "git+https://github.com/ChristianGynnild/good-web-game#509fde0f2e0f4246112c57146448a83c0fde0e31"
+source = "git+https://github.com/erikkoh/good-web-game#e818913ca15e077c4651383aa336232cb8127f98"
 dependencies = [
  "approx 0.5.1",
  "bitflags",

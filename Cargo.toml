@@ -6,6 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-good-web-game = {git = "https://github.com/ChristianGynnild/good-web-game"}
+good-web-game = {git = "https://github.com/erikkoh/good-web-game"}
 quad-rand = "0.2.1"
 

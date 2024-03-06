@@ -1,17 +1,16 @@
-use std::cell::Cell;
 use std::env;
 use std::path;
-use std::time::{Duration, Instant};
 use std::vec;
 extern crate good_web_game as ggez;
 
 use ggez::cgmath::Point2;
 use ggez::event::{self, EventHandler};
 use ggez::graphics::{
-    self, Canvas, Color, DrawMode, DrawParam, GraphicsContext, Image, Mesh, Rect,
+    self, Color, DrawMode, DrawParam, Mesh, Rect,
 };
 use ggez::input::keyboard::{KeyCode, KeyMods};
-use ggez::{conf, Context, GameResult};
+use ggez::timer::check_update_time;
+use ggez::{ Context, GameResult};
 
 
 const GIRD_DIMENSION: (f32, f32) = (20.0, 20.0);
@@ -305,76 +304,76 @@ impl GameState {
     }
 }
 
-struct Button {
-    button_bouds: Vec<Vec<f32>>,
-    button_render: bool,
-    button_image: Image,
-}
+// struct Button {
+//     button_bouds: Vec<Vec<f32>>,
+//     button_render: bool,
+//     button_image: Image,
+// }
 
-impl Button {
-    fn new(
-        size: f32,
-        pos: Vec<f32>,
-        button_type: &str,
-        ctx: &mut Context,
-        quad_ctx: &mut event::GraphicsContext,
-    ) -> GameResult<Self> {
-        let button_bouds = vec![vec![pos[0], pos[1]], vec![pos[0] + size, pos[1] + size]];
-        let button_render = true;
-        let button_image: Image = graphics::Image::new(ctx, quad_ctx, "/playbutton.png")?;
+// impl Button {
+//     fn new(
+//         size: f32,
+//         pos: Vec<f32>,
+//         button_type: &str,
+//         ctx: &mut Context,
+//         quad_ctx: &mut event::GraphicsContext,
+//     ) -> GameResult<Self> {
+//         let button_bouds = vec![vec![pos[0], pos[1]], vec![pos[0] + size, pos[1] + size]];
+//         let button_render = true;
+//         let button_image: Image = graphics::Image::new(ctx, quad_ctx, "/playbutton.png")?;
 
-        Ok(Self {
-            button_bouds,
-            button_render,
-            button_image,
-        })
-    }
+//         Ok(Self {
+//             button_bouds,
+//             button_render,
+//             button_image,
+//         })
+//     }
 
-    fn draw(&mut self, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) {
-        if self.button_render {
-            graphics::draw(
-                ctx,
-                quad_ctx,
-                &self.button_image,
-                DrawParam::new()
-                    .dest(Point2::new(
-                        Grid::gridposition(self.button_bouds[0][0]),
-                        Grid::gridposition(self.button_bouds[0][1]),
-                    ))
-                    .scale([
-                        CELL_SIZE / 30.0 * (self.button_bouds[1][0] - self.button_bouds[0][0]),
-                        CELL_SIZE / 30.0 * (self.button_bouds[1][1] - self.button_bouds[0][1]),
-                    ]),
-            );
-        }
-    }
-}
+//     fn draw(&mut self, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) {
+//         if self.button_render {
+//             graphics::draw(
+//                 ctx,
+//                 quad_ctx,
+//                 &self.button_image,
+//                 DrawParam::new()
+//                     .dest(Point2::new(
+//                         Grid::gridposition(self.button_bouds[0][0]),
+//                         Grid::gridposition(self.button_bouds[0][1]),
+//                     ))
+//                     .scale([
+//                         CELL_SIZE / 30.0 * (self.button_bouds[1][0] - self.button_bouds[0][0]),
+//                         CELL_SIZE / 30.0 * (self.button_bouds[1][1] - self.button_bouds[0][1]),
+//                     ]),
+//             );
+//         }
+//     }
+// }
 
 struct Mainstate {
     snake: Snake,
-    movment: Instant,
+    // movment: Instant,
     food: Food,
     border: Mesh,
     game_state: GameState,
     valid_direction: Vec<Direction>,
     board: Vec<Vec<f32>>,
-    start_button: Button,
+    // start_button: Button,
 }
 
 impl Mainstate {
     fn new(ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) -> GameResult<Mainstate> {
         let snake = Snake::new(ctx, quad_ctx)?;
-        let movment: Instant = Instant::now();
+        // let movment: Instant = Instant::now();
         let food = Food::new(ctx, quad_ctx)?;
         let border = graphics::Mesh::new_rectangle(
             ctx,
             quad_ctx,
-            DrawMode::stroke(CELL_SIZE * 2.0),
+            DrawMode::stroke(CELL_SIZE),
             Rect::new(
-                0.0,
-                0.0,
-                GIRD_DIMENSION.0 * CELL_SIZE,
-                GIRD_DIMENSION.1 * CELL_SIZE,
+                CELL_SIZE/2.0,
+                CELL_SIZE/2.0,
+                (GIRD_DIMENSION.0 - 1.0 )* CELL_SIZE,
+                (GIRD_DIMENSION.1 - 1.0)* CELL_SIZE,
             ),
             graphics::Color::GREEN,
         )?;
@@ -386,23 +385,23 @@ impl Mainstate {
             (GIRD_DIMENSION.0 - start_button_size) / 2.0,
             (GIRD_DIMENSION.1 - start_button_size) / 2.0,
         ];
-        let start_button = Button::new(
-            start_button_size,
-            start_button_pos,
-            "playbutton",
-            ctx,
-            quad_ctx,
-        )?;
+        // let start_button = Button::new(
+        //     start_button_size,
+        //     start_button_pos,
+        //     "playbutton",
+        //     ctx,
+        //     quad_ctx,
+        // )?;
 
         Ok(Mainstate {
             food,
             snake,
-            movment,
+            // movment,
             border,
             game_state,
             valid_direction,
             board,
-            start_button,
+            // start_button,
         })
     }
     fn reset(&mut self, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) {
@@ -415,36 +414,34 @@ impl Mainstate {
 
 impl EventHandler for Mainstate {
     fn update(&mut self, _ctx: &mut Context, _quad_ctx: &mut event::GraphicsContext) -> GameResult {
+        if check_update_time(_ctx, 10) {
         if !self.game_state.game_over && self.game_state.game_start {
-            let check: Option<Duration> = Instant::now().checked_duration_since(self.movment); //should be replaced by  fn check_update_time(&mut self, target_fps: u32) -> bool
-            match check {
-                Some(duration) => {
-                    if duration > Duration::from_millis(50) {
+            // let check: Option<Duration> = Instant::now().checked_duration_since(self.movment); //should be replaced by  fn check_update_time(&mut self, target_fps: u32) -> bool
+
+                    // if duration > Duration::from_millis(50) {
                         if self.valid_direction.len() > 1 {
                             self.snake.snake_direction = self.valid_direction[1];
                             self.valid_direction.remove(0);
                         }
                         self.snake.move_snake();
-                        self.movment = Instant::now();
+                        // self.movment = Instant::now();
                         if self.snake.snake_array[0] == self.food.food_pos {
                             self.snake.eat_food(_ctx, _quad_ctx)?;
                             self.game_state.food_count += 1;
                             self.food.new_position(&self.snake.snake_array, &self.board);
-                        };
+                        // };
                     }
                 }
-                None => {}
             }
             self.game_state
                 .check_game_state(self.snake.snake_array.clone());
+            Ok(())
         }
-        Ok(())
-    }
 
     fn draw(&mut self, ctx: &mut Context, _quad_ctx: &mut event::GraphicsContext) -> GameResult {
         graphics::clear(ctx, _quad_ctx, Color::BLACK);
 
-        self.start_button.draw(ctx, _quad_ctx);
+        // self.start_button.draw(ctx, _quad_ctx);
 
         self.snake.draw(ctx, _quad_ctx);
 
@@ -452,7 +449,7 @@ impl EventHandler for Mainstate {
         graphics::draw(
             ctx,
             _quad_ctx,
-            &graphics::Text::new((self.game_state.food_count).to_string()),
+            &graphics::Text::new("Score: ".to_owned() + (&(self.game_state.food_count).to_string())),
             DrawParam::default(),
         )?;
         self.food.draw(ctx, _quad_ctx);
@@ -460,28 +457,28 @@ impl EventHandler for Mainstate {
         Ok(())
     }
 
-    fn mouse_button_down_event(
-        &mut self,
-        _ctx: &mut Context,
-        _quad_ctx: &mut event::GraphicsContext,
-        _button: event::MouseButton,
-        _x: f32,
-        _y: f32,
-    ) {
-        let bottum_value = vec![
-            Grid::gridposition(self.start_button.button_bouds[0][0]),
-            Grid::gridposition(self.start_button.button_bouds[0][1]),
-        ];
-        let top_value = vec![
-            Grid::gridposition(self.start_button.button_bouds[1][0]),
-            Grid::gridposition(self.start_button.button_bouds[1][1]),
-        ];
-        let click = vec![_x, _y];
-        if bottum_value <= click && click <= top_value {
-            self.game_state.game_start = true;
-            self.start_button.button_render = false;
-        }
-    }
+    // fn mouse_button_down_event(
+    //     &mut self,
+    //     _ctx: &mut Context,
+    //     _quad_ctx: &mut event::GraphicsContext,
+    //     _button: event::MouseButton,
+    //     _x: f32,
+    //     _y: f32,
+    // ) {
+    //     let bottum_value = vec![
+    //         // Grid::gridposition(self.start_button.button_bouds[0][0]),
+    //         // Grid::gridposition(self.start_button.button_bouds[0][1]),
+    //     ];
+    //     let top_value = vec![
+    //         Grid::gridposition(self.start_button.button_bouds[1][0]),
+    //         Grid::gridposition(self.start_button.button_bouds[1][1]),
+    //     ];
+    //     let click = vec![_x, _y];
+    //     if bottum_value <= click && click <= top_value {
+    //         self.game_state.game_start = true;
+    //         self.start_button.button_render = false;
+    //     }
+    // }
 
     fn key_down_event(
         &mut self,
@@ -491,6 +488,7 @@ impl EventHandler for Mainstate {
         _keymods: KeyMods,
         _repeated: bool,
     ) {
+        self.game_state.game_start = true;
         let last_element = self.valid_direction.len();
         match _keycod {
             KeyCode::W | KeyCode::Up => {
