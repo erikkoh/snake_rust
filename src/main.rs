@@ -1,16 +1,21 @@
+use std::cell::Cell;
 use std::time::{Duration, Instant};
 use std::vec;
+use std::path;
+use std::env;
+extern crate good_web_game as ggez;
 
-use ggez::graphics::{self, Color, DrawMode, DrawParam, Image, Mesh, Rect};
+use ggez::cgmath::Point2;
+use ggez::graphics::{self, Color, DrawMode, DrawParam, GraphicsContext, Image, Mesh, Rect, Canvas};
 use ggez::event::{self, EventHandler};
-use ggez::{conf, Context, ContextBuilder, GameResult};
-use ggez::glam::Vec2;
-use ggez::input::keyboard::{KeyCode, KeyInput};
+use ggez::{conf, Context, GameResult};
+use glam::Vec2;
+use ggez::input::keyboard::{KeyCode, KeyMods};
 use rand::{thread_rng, Rng};
 
 
 const GIRD_DIMENSION: (f32,f32) = (20.0,20.0);
-const CELL_SIZE: f32 = 60.0;
+const CELL_SIZE: f32 = 30.0;
 
 
 //kodet under b8 xxv11 Orange Orangutan
@@ -20,22 +25,25 @@ const CELL_SIZE: f32 = 60.0;
 
 
 
-fn main() ->GameResult{
-    // Make a Context.
-    let window_size = (CELL_SIZE*GIRD_DIMENSION.0, CELL_SIZE*GIRD_DIMENSION.1); 
-    let window_mode = conf::WindowMode::default().dimensions(window_size.0, window_size.1).resizable(false);
-    let window_setup = conf::WindowSetup::default().title("Snakel").vsync(true);
-    let (mut ctx, event_loop) = ContextBuilder::new("snake", "Erikkoh").window_mode(window_mode).window_setup(window_setup)
-        .build()
-        .expect("Its joeover!");
+fn main() -> GameResult {
+    let resource_dir = if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") {
+        let mut path = path::PathBuf::from(manifest_dir);
+        path.push("resources");
+        path
+    } else {
+        path::PathBuf::from("./resources")
+    };
 
+    let conf = ggez::conf::Conf::default()
+    .physical_root_dir(Some(resource_dir))
+    .window_height((GIRD_DIMENSION.0*CELL_SIZE) as i32)
+    .window_width((GIRD_DIMENSION.1*CELL_SIZE)as i32);
 
-    let  state = Mainstate::new(&mut ctx)?;
-
-    // Run!
-    event::run(ctx, event_loop, state);
-
-}
+    ggez::start(
+        conf,
+        |mut context, mut _quad_ctx| Box::new(Mainstate::new(&mut context,_quad_ctx).unwrap()),
+    )
+    }
 struct Grid{
 }
 
@@ -101,17 +109,20 @@ struct Snake{
 }
 
 impl Snake{
-    fn new(ctx: &mut Context) -> GameResult<Self>{
+    fn new(ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) -> GameResult<Self>{
         let snake_array = vec![vec![GIRD_DIMENSION.0*1.0/2.0-1.0,
         GIRD_DIMENSION.1*1.0/2.0-1.0],
         vec![GIRD_DIMENSION.1*1.0/2.0-2.0,
         GIRD_DIMENSION.1*1.0/2.0-1.0]];
         let snake_mesh = vec![
-            graphics::Mesh::new_rectangle(ctx, 
+            graphics::Mesh::new_rectangle(ctx,
+            quad_ctx, 
             graphics::DrawMode::fill(), 
             graphics::Rect::new(0.0,0.0, CELL_SIZE, CELL_SIZE), 
-            graphics::Color::BLUE)?,
-            graphics::Mesh::new_rectangle(ctx, 
+            graphics::Color::BLUE
+            )?,
+            graphics::Mesh::new_rectangle(ctx,
+                quad_ctx, 
                 graphics::DrawMode::fill(), 
                 graphics::Rect::new(0.0,0.0, CELL_SIZE, CELL_SIZE), 
                 graphics::Color::WHITE)?,
@@ -125,11 +136,12 @@ impl Snake{
 
     }
 
-    fn eat_food(&mut self, ctx: &mut Context)->GameResult{
+    fn eat_food(&mut self, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext)->GameResult{
         let tail:Vec<f32> = self.snake_array[self.snake_array.len()-1].clone();
         self.move_snake();       
         let new_tail_mesh = graphics::Mesh::new_rectangle(
-            ctx, 
+            ctx,
+            quad_ctx, 
             graphics::DrawMode::fill(), 
             graphics::Rect::new( 0.0, 0.0, CELL_SIZE, CELL_SIZE), 
             graphics::Color::WHITE)?;
@@ -150,13 +162,14 @@ impl Snake{
 
     }
 
-    fn draw(&self, canvas:&mut graphics::Canvas){
+    fn draw(&self, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext){
         for i in 0..=(self.snake_array.len()-1) {
-            canvas.draw(&self.snake_mesh[i], Vec2::new(Grid::gridposition(self.snake_array[i][0]),Grid::gridposition(self.snake_array[i][1])));
+            let dst = Point2::new(20.0, 20.0);
+            graphics::draw(ctx, quad_ctx,&self.snake_mesh[i], DrawParam::new().dest(Point2::new(Grid::gridposition(self.snake_array[i][0]),Grid::gridposition(self.snake_array[i][0]))));
         }
     }
 
-    fn reset(&mut self, ctx: &mut Context) -> GameResult{
+    fn reset(&mut self, ctx: &mut Context,quad_ctx: &mut event::GraphicsContext) -> GameResult{
         self.snake_array = vec![vec![GIRD_DIMENSION.0*1.0/2.0-1.0,
         GIRD_DIMENSION.1*1.0/2.0-1.0],
         vec![GIRD_DIMENSION.1*1.0/2.0-2.0,
@@ -164,11 +177,13 @@ impl Snake{
 
         self.snake_direction = Direction:: Right;
         self.snake_mesh = vec![
-            graphics::Mesh::new_rectangle(ctx, 
+            graphics::Mesh::new_rectangle(ctx,
+            quad_ctx, 
             graphics::DrawMode::fill(), 
             graphics::Rect::new(0.0,0.0, CELL_SIZE, CELL_SIZE), 
             graphics::Color::BLUE)?,
-            graphics::Mesh::new_rectangle(ctx, 
+            graphics::Mesh::new_rectangle(ctx,
+                quad_ctx, 
                 graphics::DrawMode::fill(), 
                 graphics::Rect::new(0.0,0.0, CELL_SIZE, CELL_SIZE), 
                 graphics::Color::WHITE)?,
@@ -186,9 +201,9 @@ struct Food{
 }
 
 impl Food {
-    fn new(ctx: &mut Context)->GameResult<Self>{
+    fn new(ctx: &mut Context, quad_ctx: &mut event::GraphicsContext)->GameResult<Self>{
         let food_pos = vec![(GIRD_DIMENSION.0)/2.0+(GIRD_DIMENSION.0)/5.0,((GIRD_DIMENSION.1)/2.0)];
-        let food_mesh = graphics::Mesh::new_rectangle(ctx, DrawMode::fill(), graphics::Rect::new(0.0,0.0,CELL_SIZE,CELL_SIZE), graphics::Color::RED)?;
+        let food_mesh = graphics::Mesh::new_rectangle(ctx, quad_ctx, DrawMode::fill(), graphics::Rect::new(0.0,0.0,CELL_SIZE,CELL_SIZE), graphics::Color::RED)?;
         Ok(Self{
             food_mesh,
             food_pos,
@@ -210,8 +225,8 @@ impl Food {
 
 
     }
-    fn draw(&mut self, canvas:&mut graphics::Canvas){
-        canvas.draw(&self.food_mesh,Vec2::new(Grid::gridposition(self.food_pos[0]),Grid::gridposition(self.food_pos[1])));
+    fn draw(&mut self, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext){
+        graphics::draw(ctx,quad_ctx,&self.food_mesh,DrawParam::new().dest(Point2::new(Grid::gridposition(self.food_pos[0]),Grid::gridposition(self.food_pos[1]))));
     }
 
     fn reset(&mut self){
@@ -270,31 +285,28 @@ struct Button{
     button_bouds: Vec<Vec<f32>>,
     button_render: bool,
     button_image: Image,
-    button_size: f32,
 }
 
 impl Button{
-    fn new(size: f32, pos: Vec<f32>, button_type: &str, ctx: &mut Context ) -> GameResult<Self>{
+    fn new(size: f32, pos: Vec<f32>, button_type: &str, ctx: &mut Context,quad_ctx: &mut event::GraphicsContext ) -> GameResult<Self>{
         let button_bouds = vec![vec![pos[0], pos[1]], vec![pos[0] + size, pos [1] + size]];
         let button_render = true;
         let button_size = size;
-        let button_image: Image = graphics::Image::from_path(ctx, "/playbutton.png")?;
+        let button_image: Image = graphics::Image::new(ctx,quad_ctx, "/playbutton.png")?;
 
         Ok(Self{
             button_bouds,
             button_render,
             button_image,
-            button_size,
         })
     }
 
 
-    fn draw(&mut self, canvas: &mut graphics::Canvas){
+    fn draw(&mut self, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext){
         if self.button_render {
-            canvas.draw(&self.button_image, DrawParam::new().
-            dest(Vec2::new(Grid::gridposition(self.button_bouds[0][0]),Grid::gridposition(self.button_bouds[0][1]))).
-            z(1).scale([CELL_SIZE/30.0*(self.button_bouds[1][0]-self.button_bouds[0][0]),CELL_SIZE/30.0*(self.button_bouds[1][1]-self.button_bouds[0][1])]));
-    //[Grid::gridposition(self.button_size),Grid::gridposition(self.button_size)]
+            graphics::draw(ctx,quad_ctx,&self.button_image, DrawParam::new().
+            dest(Point2::new(Grid::gridposition(self.button_bouds[0][0]),Grid::gridposition(self.button_bouds[0][1])))
+            .scale([CELL_SIZE/30.0*(self.button_bouds[1][0]-self.button_bouds[0][0]),CELL_SIZE/30.0*(self.button_bouds[1][1]-self.button_bouds[0][1])]));
         }
     }
 }
@@ -313,17 +325,18 @@ struct Mainstate {
 
 
 impl Mainstate{
-    fn new(ctx: &mut Context) -> GameResult<Mainstate>{
-        let snake = Snake::new(ctx)?;
+    fn new(ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) -> GameResult<Mainstate>{
+        let snake = Snake::new(ctx,quad_ctx)?;
         let movment: Instant = Instant::now(); 
-        let food = Food::new(ctx)?;
-        let border = graphics::Mesh::new_rectangle(ctx, DrawMode::stroke(CELL_SIZE*2.0), Rect::new(0.0, 0.0, GIRD_DIMENSION.0*CELL_SIZE, GIRD_DIMENSION.1*CELL_SIZE), graphics::Color::GREEN)?;
+        let food = Food::new(ctx,quad_ctx)?;
+        let border = graphics::Mesh::new_rectangle(ctx, quad_ctx, DrawMode::stroke(CELL_SIZE*2.0), Rect::new(0.0, 0.0, GIRD_DIMENSION.0*CELL_SIZE, GIRD_DIMENSION.1*CELL_SIZE), graphics::Color::GREEN)?;
         let game_state = GameState::new();
         let valid_direction = vec![snake.snake_direction];
         let board = Grid::get_grid();
         let start_button_size = 8.0;
         let start_button_pos = vec![(GIRD_DIMENSION.0-start_button_size)/2.0, (GIRD_DIMENSION.1-start_button_size)/2.0];
-        let start_button = Button::new(start_button_size, start_button_pos, "playbutton", ctx)?;
+        let start_button = Button::new(start_button_size, start_button_pos, "playbutton", ctx,quad_ctx)?;
+        let canvas = Canvas::with_window_size(ctx, quad_ctx)?;
 
         Ok(Mainstate{
             food,
@@ -336,8 +349,8 @@ impl Mainstate{
             start_button,
         })
     }
-    fn reset(&mut self, ctx: &mut Context){
-        self.snake.reset(ctx);
+    fn reset(&mut self, ctx: &mut Context,quad_ctx: &mut event::GraphicsContext){
+        self.snake.reset(ctx,quad_ctx);
         self.food.reset();
         self.valid_direction = vec![self.snake.snake_direction];
         self.game_state.reset();
@@ -346,7 +359,7 @@ impl Mainstate{
 
 impl EventHandler for  Mainstate{
     
-    fn update(&mut self, _ctx: &mut Context) -> GameResult {
+    fn update(&mut self, _ctx: &mut Context, _quad_ctx: &mut event::GraphicsContext) -> GameResult {
 
         if !self.game_state.game_over && self.game_state.game_start{
             let check:Option<Duration> = Instant::now().checked_duration_since(self.movment); //should be replaced by  fn check_update_time(&mut self, target_fps: u32) -> bool
@@ -361,7 +374,7 @@ impl EventHandler for  Mainstate{
                         self.snake.move_snake();
                         self.movment = Instant::now();
                         if self.snake.snake_array[0] == self.food.food_pos{
-                            self.snake.eat_food(_ctx,)?;
+                            self.snake.eat_food(_ctx,_quad_ctx)?;
                             self.game_state.food_count +=1;
                             self.food.new_position(&self.snake.snake_array, &self.board);
                         };
@@ -378,28 +391,29 @@ impl EventHandler for  Mainstate{
  
 
 
-     fn draw(&mut self, ctx: &mut Context) -> GameResult {
-         let mut canvas = graphics::Canvas::from_frame(ctx, Color::BLACK);
+     fn draw(&mut self, ctx: &mut Context,_quad_ctx: &mut event::GraphicsContext) -> GameResult {
+        graphics::clear(ctx,_quad_ctx,Color::BLACK);
         
-        self.start_button.draw(&mut canvas);
+        self.start_button.draw(ctx,_quad_ctx);
 
-        self.snake.draw(&mut canvas);
+        self.snake.draw(ctx,_quad_ctx);
 
 
-        canvas.draw(&self.border, DrawParam::default());
-        canvas.draw(graphics::Text::new((self.game_state.food_count).to_string()).set_scale(24.0),Vec2::new(0.0,0.0));
-        self.food.draw(&mut canvas);
-        canvas.finish(ctx)?;
+        graphics::draw(ctx,_quad_ctx,&self.border, DrawParam::default())?;
+        graphics::draw(ctx,_quad_ctx, &graphics::Text::new((self.game_state.food_count).to_string()),DrawParam::default())?;
+        self.food.draw(ctx,_quad_ctx);
+        graphics::present(ctx, _quad_ctx)?;
         Ok(())
      }
     
     fn mouse_button_down_event(
             &mut self,
             _ctx: &mut Context,
+            _quad_ctx: &mut event::GraphicsContext,
             _button: event::MouseButton,
             _x: f32,
             _y: f32,
-        ) -> GameResult{
+        ){
             let bottum_value = vec![Grid::gridposition(self.start_button.button_bouds[0][0]),Grid::gridposition(self.start_button.button_bouds[0][1])];
             let top_value = vec![Grid::gridposition(self.start_button.button_bouds[1][0]),Grid::gridposition(self.start_button.button_bouds[1][1])];
             let click = vec![_x,_y];
@@ -407,48 +421,44 @@ impl EventHandler for  Mainstate{
                 self.game_state.game_start= true;
                 self.start_button.button_render = false;
             }
-            Ok(())
         } 
 
      fn key_down_event(
              &mut self,
              _ctx: &mut Context,
-             input: KeyInput,
+             _quad_ctx: &mut event::GraphicsContext,
+             _keycod: KeyCode,
+             _keymods: KeyMods,
              _repeated: bool,
-         ) -> GameResult {
+         ){
             let last_element = self.valid_direction.len();
-         match input.keycode{
-            Some(KeyCode::W) | Some(KeyCode::Up)=> {
+         match _keycod{
+            KeyCode::W | KeyCode::Up => {
                 if Direction::check_direction(&self.valid_direction[last_element-1], KeyCode::W){
                 self.valid_direction.push(Direction::Up);
                 }
             },
-            Some(KeyCode::S) | Some(KeyCode::Down)=> {
+            (KeyCode::S) | (KeyCode::Down)=> {
                 if Direction::check_direction(&self.valid_direction[last_element-1], KeyCode::S){
                     self.valid_direction.push(Direction::Down);
 
                 }
                 },
-            Some(KeyCode::A) | Some(KeyCode::Left)=>{
+            (KeyCode::A) | (KeyCode::Left)=>{
                 if Direction::check_direction(&&self.valid_direction[last_element-1], KeyCode::A){
                     self.valid_direction.push(Direction::Left);        
                 }
                 },
-            Some(KeyCode::D) | Some(KeyCode::Right)=>{
+            (KeyCode::D) | (KeyCode::Right)=>{
                 if Direction::check_direction(&self.valid_direction[last_element-1], KeyCode::D){
                     self.valid_direction.push( Direction::Right);
                 }
                 },
-                Some(KeyCode::R) | Some(KeyCode::Space) => {
-                    self.reset(_ctx);
+                (KeyCode::R) | (KeyCode::Space) => {
+                    self.reset(_ctx,_quad_ctx);
                 }
-            Some(KeyCode::Escape) => {
-                _ctx.request_quit();
-            }
             _ => (),
          }
-        Ok(())
-
      }
 
 
