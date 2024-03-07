@@ -1,5 +1,2 @@
 .vs
 /target/*
-!/target/debug
-/target/debug/*
-!/target/debug/resources
