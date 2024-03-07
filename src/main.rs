@@ -103,11 +103,11 @@ impl Snake {
         let snake_array = vec![
             vec![
                 GIRD_DIMENSION.0 * 1.0 / 2.0 - 1.0,
-                GIRD_DIMENSION.1 * 1.0 / 2.0 - 1.0,
+                GIRD_DIMENSION.1 * 1.0 / 2.0,
             ],
             vec![
                 GIRD_DIMENSION.1 * 1.0 / 2.0 - 2.0,
-                GIRD_DIMENSION.1 * 1.0 / 2.0 - 1.0,
+                GIRD_DIMENSION.1 * 1.0 / 2.0,
             ],
         ];
         let snake_mesh = vec![
@@ -388,18 +388,6 @@ impl Mainstate {
         let game_state = GameState::new();
         let valid_direction = vec![snake.snake_direction];
         let board = Grid::get_grid();
-        let start_button_size = 8.0;
-        let start_button_pos = vec![
-            (GIRD_DIMENSION.0 - start_button_size) / 2.0,
-            (GIRD_DIMENSION.1 - start_button_size) / 2.0,
-        ];
-        // let start_button = Button::new(
-        //     start_button_size,
-        //     start_button_pos,
-        //     "playbutton",
-        //     ctx,
-        //     quad_ctx,
-        // )?;
 
         Ok(Mainstate {
             food,
