@@ -102,12 +102,12 @@ impl Snake {
     fn new(ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) -> GameResult<Self> {
         let snake_array = vec![
             vec![
-                GIRD_DIMENSION.0 * 1.0 / 2.0 - 1.0,
-                GIRD_DIMENSION.1 * 1.0 / 2.0,
+                GIRD_DIMENSION.0/ 2.0 - 1.0,
+                GIRD_DIMENSION.1/ 2.0,
             ],
             vec![
-                GIRD_DIMENSION.1 * 1.0 / 2.0 - 2.0,
-                GIRD_DIMENSION.1 * 1.0 / 2.0,
+                GIRD_DIMENSION.1/ 2.0 - 2.0,
+                GIRD_DIMENSION.1/ 2.0,
             ],
         ];
         let snake_mesh = vec![
@@ -183,12 +183,12 @@ impl Snake {
     fn reset(&mut self, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) -> GameResult {
         self.snake_array = vec![
             vec![
-                GIRD_DIMENSION.0 * 1.0 / 2.0 - 1.0,
-                GIRD_DIMENSION.1 * 1.0 / 2.0 - 1.0,
+                GIRD_DIMENSION.0/ 2.0-1.0,
+                GIRD_DIMENSION.1/ 2.0,
             ],
             vec![
-                GIRD_DIMENSION.1 * 1.0 / 2.0 - 2.0,
-                GIRD_DIMENSION.1 * 1.0 / 2.0 - 1.0,
+                GIRD_DIMENSION.1/ 2.0 - 2.0,
+                GIRD_DIMENSION.1/ 2.0,
             ],
         ];
 
@@ -312,66 +312,89 @@ impl GameState {
     }
 }
 
-// struct Button {
-//     button_bouds: Vec<Vec<f32>>,
-//     button_render: bool,
-//     button_image: Image,
-// }
+struct Button {
+    button_bouds: Vec<Vec<f32>>,
+    button_render: bool,
+    button_mesh: Vec<Mesh>,
+}
 
-// impl Button {
-//     fn new(
-//         size: f32,
-//         pos: Vec<f32>,
-//         button_type: &str,
-//         ctx: &mut Context,
-//         quad_ctx: &mut event::GraphicsContext,
-//     ) -> GameResult<Self> {
-//         let button_bouds = vec![vec![pos[0], pos[1]], vec![pos[0] + size, pos[1] + size]];
-//         let button_render = true;
-//         let button_image: Image = graphics::Image::new(ctx, quad_ctx, "/playbutton.png")?;
+impl Button {
+    fn new(
+        size: f32,
+        pos: Vec<f32>,
+        button_type: &str,
+        ctx: &mut Context,
+        quad_ctx: &mut event::GraphicsContext,
+    ) -> GameResult<Self> {
+        let button_bouds = vec![vec![pos[0], pos[1]], vec![pos[0] + size, pos[1] + size]];
+        let button_render = true;
+        let button_mesh: Vec<Mesh> = make_button_mesh(button_type,ctx, quad_ctx);
 
-//         Ok(Self {
-//             button_bouds,
-//             button_render,
-//             button_image,
-//         })
-//     }
+        fn make_button_mesh(button_type: &str, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) -> Vec<Mesh>{
+            match button_type{
+                "speed_button" => {
+                    let meshify = graphics::Mesh::new_rectangle(ctx, quad_ctx, DrawMode::fill(), graphics::Rect::new(0.0, 0.0, 5.0, 5.0), Color::BLUE);
+                    match  meshify {
+                        Ok(Mesh) => { vec![(Mesh)]}
+                        Err(_) => {
+                            panic!("Problem creating button mesh")
+                        }
+                        
+                    }
+                }
+                _ => {
+                    panic!("Invalid button type");
+                }
+            }
 
-//     fn draw(&mut self, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) {
-//         if self.button_render {
-//             graphics::draw(
-//                 ctx,
-//                 quad_ctx,
-//                 &self.button_image,
-//                 DrawParam::new()
-//                     .dest(Point2::new(
-//                         Grid::gridposition(self.button_bouds[0][0]),
-//                         Grid::gridposition(self.button_bouds[0][1]),
-//                     ))
-//                     .scale([
-//                         CELL_SIZE / 30.0 * (self.button_bouds[1][0] - self.button_bouds[0][0]),
-//                         CELL_SIZE / 30.0 * (self.button_bouds[1][1] - self.button_bouds[0][1]),
-//                     ]),
-//             );
-//         }
-//     }
-// }
+        }
+
+        Ok(Self {
+            button_bouds,
+            button_render,
+            button_mesh,
+        })
+    }
+    
+    fn draw(&mut self, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) {
+        if self.button_render {
+            let error = graphics::draw(
+                ctx,
+                quad_ctx,
+                &self.button_mesh[0],
+                DrawParam::new()
+                    .dest(Point2::new(
+                        Grid::gridposition(self.button_bouds[0][0]),
+                        Grid::gridposition(self.button_bouds[0][1]),
+                    ))
+                    .scale([
+                        CELL_SIZE / 30.0 * (self.button_bouds[1][0] - self.button_bouds[0][0]),
+                        CELL_SIZE / 30.0 * (self.button_bouds[1][1] - self.button_bouds[0][1]),
+                    ]));
+            match error {
+            Ok (()) => {()}
+            Err(_) => {
+                panic!("Problem with drawing butotn")
+            }
+        }
+        }
+    }
+}
 
 struct Mainstate {
     snake: Snake,
-    // movment: Instant,
     food: Food,
     border: Mesh,
     game_state: GameState,
     valid_direction: Vec<Direction>,
     board: Vec<Vec<f32>>,
-    // start_button: Button,
+    start_button: Button,
 }
 
 impl Mainstate {
     fn new(ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) -> GameResult<Mainstate> {
+        let start_button = Button::new(4.0,vec![0.0,0.0],  "speed_button", ctx, quad_ctx )?;
         let snake = Snake::new(ctx, quad_ctx)?;
-        // let movment: Instant = Instant::now();
         let food = Food::new(ctx, quad_ctx)?;
         let border = graphics::Mesh::new_rectangle(
             ctx,
@@ -392,12 +415,11 @@ impl Mainstate {
         Ok(Mainstate {
             food,
             snake,
-            // movment,
             border,
             game_state,
             valid_direction,
             board,
-            // start_button,
+            start_button,
         })
     }
     fn reset(&mut self, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) {
@@ -406,6 +428,7 @@ impl Mainstate {
             Ok(()) => {()},
             Err(_) => {panic!("Problem with reseting snake")}
         }
+        self.game_state.game_start = false;
         self.food.reset();
         self.valid_direction = vec![self.snake.snake_direction];
         self.game_state.reset();
@@ -416,9 +439,6 @@ impl EventHandler for Mainstate {
     fn update(&mut self, _ctx: &mut Context, _quad_ctx: &mut event::GraphicsContext) -> GameResult {
         if check_update_time(_ctx, 10) {
             if !self.game_state.game_over && self.game_state.game_start {
-                // let check: Option<Duration> = Instant::now().checked_duration_since(self.movment); //should be replaced by  fn check_update_time(&mut self, target_fps: u32) -> bool
-
-                // if duration > Duration::from_millis(50) {
                 if self.valid_direction.len() > 1 {
                     self.snake.snake_direction = self.valid_direction[1];
                     self.valid_direction.remove(0);
@@ -441,7 +461,7 @@ impl EventHandler for Mainstate {
     fn draw(&mut self, ctx: &mut Context, _quad_ctx: &mut event::GraphicsContext) -> GameResult {
         graphics::clear(ctx, _quad_ctx, Color::BLACK);
 
-        // self.start_button.draw(ctx, _quad_ctx);
+        self.start_button.draw(ctx, _quad_ctx);
 
         self.snake.draw(ctx, _quad_ctx);
 
