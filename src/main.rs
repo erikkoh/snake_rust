@@ -1,9 +1,11 @@
+use core::panic;
 use std::env;
 use std::path;
 use std::vec;
 extern crate good_web_game as ggez;
 
 use ggez::cgmath::Point2;
+use ggez::error;
 use ggez::event::{self, EventHandler};
 use ggez::graphics::{self, Color, DrawMode, DrawParam, Mesh, Rect};
 use ggez::input::keyboard::{KeyCode, KeyMods};
@@ -179,38 +181,6 @@ impl Snake {
             }
         }
     }
-
-    fn reset(&mut self, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) -> GameResult {
-        self.snake_array = vec![
-            vec![
-                GIRD_DIMENSION.0/ 2.0-1.0,
-                GIRD_DIMENSION.1/ 2.0,
-            ],
-            vec![
-                GIRD_DIMENSION.1/ 2.0 - 2.0,
-                GIRD_DIMENSION.1/ 2.0,
-            ],
-        ];
-
-        self.snake_direction = Direction::Right;
-        self.snake_mesh = vec![
-            graphics::Mesh::new_rectangle(
-                ctx,
-                quad_ctx,
-                graphics::DrawMode::fill(),
-                graphics::Rect::new(0.0, 0.0, CELL_SIZE, CELL_SIZE),
-                graphics::Color::BLUE,
-            )?,
-            graphics::Mesh::new_rectangle(
-                ctx,
-                quad_ctx,
-                graphics::DrawMode::fill(),
-                graphics::Rect::new(0.0, 0.0, CELL_SIZE, CELL_SIZE),
-                graphics::Color::WHITE,
-            )?,
-        ];
-        Ok(())
-    }
 }
 
 struct Food {
@@ -267,12 +237,6 @@ impl Food {
 
     }
 
-    fn reset(&mut self) {
-        self.food_pos = vec![
-            (GIRD_DIMENSION.0) / 2.0 + (GIRD_DIMENSION.0) / 5.0,
-            ((GIRD_DIMENSION.1) / 2.0),
-        ];
-    }
 }
 
 struct GameState {
@@ -305,10 +269,6 @@ impl GameState {
         if head.contains(&0.0) || head.contains(&(GIRD_DIMENSION.0 - 1.0)) {
             self.game_over = true;
         }
-    }
-    fn reset(&mut self) {
-        self.game_over = false;
-        self.food_count = 0;
     }
 }
 
@@ -423,15 +383,15 @@ impl Mainstate {
         })
     }
     fn reset(&mut self, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) {
-        let test_reset = self.snake.reset(ctx, quad_ctx);
-        match test_reset {
-            Ok(()) => {()},
-            Err(_) => {panic!("Problem with reseting snake")}
+        match Mainstate::new(ctx,quad_ctx){
+            Ok(attempt) => {
+                *self = attempt;
+            }
+            Err(_) => {
+                panic!("Failed reseting gamestate")
+            }
         }
-        self.game_state.game_start = false;
-        self.food.reset();
-        self.valid_direction = vec![self.snake.snake_direction];
-        self.game_state.reset();
+
     }
 }
 
@@ -469,9 +429,9 @@ impl EventHandler for Mainstate {
         graphics::draw(
             ctx,
             _quad_ctx,
-            &graphics::Text::new(
+            graphics::Text::new(
                 "Score: ".to_owned() + (&(self.game_state.food_count).to_string()),
-            ),
+            ).set_bounds(Point2::new(3.0*CELL_SIZE,CELL_SIZE), graphics::Align::Left),
             DrawParam::default(),
         )?;
         self.food.draw(ctx, _quad_ctx);
