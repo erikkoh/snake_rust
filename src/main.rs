@@ -5,9 +5,8 @@ use std::vec;
 extern crate good_web_game as ggez;
 
 use ggez::cgmath::Point2;
-use ggez::error;
 use ggez::event::{self, EventHandler};
-use ggez::graphics::{self, Color, DrawMode, DrawParam, Mesh, Rect};
+use ggez::graphics::{self, Color, DrawMode, DrawParam, Mesh, Rect, Text, TextFragment};
 use ggez::input::keyboard::{KeyCode, KeyMods};
 use ggez::timer::check_update_time;
 use ggez::{Context, GameResult};
@@ -275,70 +274,96 @@ impl GameState {
 struct Button {
     button_bouds: Vec<Vec<f32>>,
     button_render: bool,
-    button_mesh: Vec<Mesh>,
+    button_mesh: Mesh,
+    button_text: Text,
+    button_size: f32,
 }
 
 impl Button {
     fn new(
         size: f32,
         pos: Vec<f32>,
-        button_type: &str,
+        input_text: &str,
         ctx: &mut Context,
         quad_ctx: &mut event::GraphicsContext,
     ) -> GameResult<Self> {
         let button_bouds = vec![vec![pos[0], pos[1]], vec![pos[0] + size, pos[1] + size]];
         let button_render = true;
-        let button_mesh: Vec<Mesh> = make_button_mesh(button_type,ctx, quad_ctx);
-
-        fn make_button_mesh(button_type: &str, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) -> Vec<Mesh>{
-            match button_type{
-                "speed_button" => {
-                    let meshify = graphics::Mesh::new_rectangle(ctx, quad_ctx, DrawMode::fill(), graphics::Rect::new(0.0, 0.0, 5.0, 5.0), Color::BLUE);
-                    match  meshify {
-                        Ok(Mesh) => { vec![(Mesh)]}
-                        Err(_) => {
-                            panic!("Problem creating button mesh")
-                        }
-                        
-                    }
-                }
-                _ => {
-                    panic!("Invalid button type");
-                }
-            }
-
-        }
+        let (button_mesh,button_text) = Button::make_button_mesh(input_text, size,ctx, quad_ctx);
+        let button_size = size;
 
         Ok(Self {
             button_bouds,
             button_render,
             button_mesh,
+            button_text,
+            button_size,
         })
     }
     
-    fn draw(&mut self, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) {
-        if self.button_render {
-            let error = graphics::draw(
+    fn make_button_mesh(button_text: &str, button_size: f32, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) -> (Mesh,Text) {
+        let meshify = graphics::Mesh::new_rectangle(ctx, quad_ctx, DrawMode::fill(), graphics::Rect::new(0.0, 0.0, Grid::gridposition(button_size),Grid::gridposition(button_size)), Color::BLUE);    
+        let button_text:Text = Text::new(TextFragment::new(button_text).scale(Grid::gridposition(button_size)*8.0/10.0));
+        match meshify{
+            Ok(attempt) => {
+                (attempt,button_text)
+                           
+                }
+            Err(_) => {
+                panic!("Problem creating button mesh")
+                }
+
+
+    }
+}
+    fn draw_text(&mut self, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext){
+        if self.button_render{
+            let _test = graphics::draw(
                 ctx,
                 quad_ctx,
-                &self.button_mesh[0],
+                &self.button_text,
                 DrawParam::new()
                     .dest(Point2::new(
                         Grid::gridposition(self.button_bouds[0][0]),
                         Grid::gridposition(self.button_bouds[0][1]),
                     ))
-                    .scale([
-                        CELL_SIZE / 30.0 * (self.button_bouds[1][0] - self.button_bouds[0][0]),
-                        CELL_SIZE / 30.0 * (self.button_bouds[1][1] - self.button_bouds[0][1]),
-                    ]));
-            match error {
+                    .offset(Point2::new(-Grid::gridposition(self.button_size)/10.0,-Grid::gridposition(self.button_size)/10.0)).color(Color::RED));
+        match _test {
             Ok (()) => {()}
             Err(_) => {
-                panic!("Problem with drawing butotn")
+                panic!("Problem with drawing button text")
             }
         }
-        }
     }
+        }
+
+    fn draw_mesh(&mut self, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) {
+        if self.button_render {
+            let _test = graphics::draw(
+                ctx,
+                quad_ctx,
+                &self.button_mesh,
+                DrawParam::new()
+                    .dest(Point2::new(
+                        Grid::gridposition(self.button_bouds[0][0]),
+                        Grid::gridposition(self.button_bouds[0][1]),
+                    )));
+                
+            match _test {
+                Ok (()) => {()}
+                Err(_) => {
+                    panic!("Problem with drawing button mesh")
+                }
+            }
+            }
+        }
+
+    fn draw_button_with_text(&mut self, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext){
+        self.draw_mesh(ctx, quad_ctx);
+        self.draw_text(ctx, quad_ctx);
+    }
+
+
 }
 
 struct Mainstate {
@@ -353,7 +378,6 @@ struct Mainstate {
 
 impl Mainstate {
     fn new(ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) -> GameResult<Mainstate> {
-        let start_button = Button::new(4.0,vec![0.0,0.0],  "speed_button", ctx, quad_ctx )?;
         let snake = Snake::new(ctx, quad_ctx)?;
         let food = Food::new(ctx, quad_ctx)?;
         let border = graphics::Mesh::new_rectangle(
@@ -368,6 +392,8 @@ impl Mainstate {
             ),
             graphics::Color::GREEN,
         )?;
+        let start_button = Button::new(4.0,vec![5.0, 5.0],  "2x", ctx, quad_ctx )?;
+        
         let game_state = GameState::new();
         let valid_direction = vec![snake.snake_direction];
         let board = Grid::get_grid();
@@ -404,12 +430,10 @@ impl EventHandler for Mainstate {
                     self.valid_direction.remove(0);
                 }
                 self.snake.move_snake();
-                // self.movment = Instant::now();
                 if self.snake.snake_array[0] == self.food.food_pos {
                     self.snake.eat_food(_ctx, _quad_ctx)?;
                     self.game_state.food_count += 1;
                     self.food.new_position(&self.snake.snake_array, &self.board);
-                    // };
                 }
             }
         }
@@ -421,20 +445,22 @@ impl EventHandler for Mainstate {
     fn draw(&mut self, ctx: &mut Context, _quad_ctx: &mut event::GraphicsContext) -> GameResult {
         graphics::clear(ctx, _quad_ctx, Color::BLACK);
 
-        self.start_button.draw(ctx, _quad_ctx);
+        
 
         self.snake.draw(ctx, _quad_ctx);
+        
 
         graphics::draw(ctx, _quad_ctx, &self.border, DrawParam::default())?;
         graphics::draw(
             ctx,
             _quad_ctx,
-            graphics::Text::new(
-                "Score: ".to_owned() + (&(self.game_state.food_count).to_string()),
-            ).set_bounds(Point2::new(3.0*CELL_SIZE,CELL_SIZE), graphics::Align::Left),
+            graphics::Text::new(TextFragment::new(
+                "Score: ".to_owned() + (&(self.game_state.food_count).to_string())).scale(32.0),
+            ).set_bounds(Point2::new(6.0*CELL_SIZE,CELL_SIZE), graphics::Align::Left),
             DrawParam::default(),
         )?;
         self.food.draw(ctx, _quad_ctx);
+        self.start_button.draw_button_with_text(ctx, _quad_ctx);
         graphics::present(ctx, _quad_ctx)?;
         Ok(())
     }
@@ -496,6 +522,9 @@ impl EventHandler for Mainstate {
             }
             KeyCode::R | KeyCode::Space => {
                 self.reset(_ctx, _quad_ctx);
+            }
+            KeyCode::Escape => {
+                event::quit(_ctx); //does not work on wasm but makes troubleshooting easier (:
             }
             _ => (),
         }
