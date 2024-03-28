@@ -6,6 +6,7 @@ extern crate good_web_game as ggez;
 
 use ggez::cgmath::Point2;
 use ggez::event::{self, EventHandler};
+use ggez::graphics::MeshBuilder;
 use ggez::graphics::{self, Color, DrawMode, DrawParam, Mesh, Rect, Text, TextFragment};
 use ggez::input::keyboard::{KeyCode, KeyMods};
 use ggez::timer::check_update_time;
@@ -279,6 +280,8 @@ struct Button {
     button_size: f32,
 }
 
+
+
 impl Button {
     fn new(
         size: f32,
@@ -286,10 +289,11 @@ impl Button {
         input_text: &str,
         ctx: &mut Context,
         quad_ctx: &mut event::GraphicsContext,
+        button_type: &str,
     ) -> GameResult<Self> {
         let button_bouds = vec![vec![pos[0], pos[1]], vec![pos[0] + size, pos[1] + size]];
         let button_render = true;
-        let (button_mesh,button_text) = Button::make_button_mesh(input_text, size,ctx, quad_ctx);
+        let (button_mesh,button_text) = Button::make_button_mesh(input_text, size,ctx, quad_ctx, button_type);
         let button_size = size;
 
         Ok(Self {
@@ -301,9 +305,27 @@ impl Button {
         })
     }
     
-    fn make_button_mesh(button_text: &str, button_size: f32, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext) -> (Mesh,Text) {
-        let meshify = graphics::Mesh::new_rectangle(ctx, quad_ctx, DrawMode::fill(), graphics::Rect::new(0.0, 0.0, Grid::gridposition(button_size),Grid::gridposition(button_size)), Color::BLUE);    
+    fn make_button_mesh(button_text: &str, button_size: f32, ctx: &mut Context, quad_ctx: &mut event::GraphicsContext, button_type: &str) -> (Mesh,Text) {
+        
         let button_text:Text = Text::new(TextFragment::new(button_text).scale(Grid::gridposition(button_size)*8.0/10.0));
+        let meshify: Result<Mesh, ggez::GameError> = match button_type{
+            "speed_button" =>{
+                graphics::Mesh::new_rectangle(ctx, quad_ctx, DrawMode::fill(), graphics::Rect::new(0.0, 0.0, Grid::gridposition(button_size),Grid::gridposition(button_size)), Color::BLUE)   
+        
+            }
+            "start_button" =>{
+                let mut button_mesh: MeshBuilder = MeshBuilder::new();
+                //I'll do the error handling later
+                button_mesh.rectangle(DrawMode::fill(), Rect::new(0.0,0.0,Grid::gridposition(button_size),Grid::gridposition(button_size)), Color::GREEN);
+                button_mesh.polygon(DrawMode::fill(), &[[0.0,0.0],[Grid::gridposition(button_size/2.0),Grid::gridposition(button_size/2.0)],[0.0,Grid::gridposition(button_size)]], Color::WHITE);
+                button_mesh.build(ctx, quad_ctx)
+            }
+        _ =>{
+            panic!("invalid button type");
+        }
+        };
+
+        
         match meshify{
             Ok(attempt) => {
                 (attempt,button_text)
@@ -373,6 +395,7 @@ struct Mainstate {
     game_state: GameState,
     valid_direction: Vec<Direction>,
     board: Vec<Vec<f32>>,
+    speed_buttons: Vec<Button>,
     start_button: Button,
 }
 
@@ -392,8 +415,14 @@ impl Mainstate {
             ),
             graphics::Color::GREEN,
         )?;
-        let start_button = Button::new(4.0,vec![5.0, 5.0],  "2x", ctx, quad_ctx )?;
-        
+
+        let speeds = vec!["1x", "2x", "4x", "8x"];
+        let mut speed_buttons: Vec<Button> = Vec::with_capacity(speeds.len());
+        for i in 0..(speeds.len()){
+            let tempt_button = Button::new(1.0,vec![5.0+2.0*(i as f32), 5.0],speeds[i] , ctx, quad_ctx,"speed_button")?;    
+            speed_buttons.push(tempt_button);
+        }; 
+        let start_button = Button::new(4.0,vec![0.0,0.0],"", ctx, quad_ctx,"start_button")?;
         let game_state = GameState::new();
         let valid_direction = vec![snake.snake_direction];
         let board = Grid::get_grid();
@@ -405,6 +434,7 @@ impl Mainstate {
             game_state,
             valid_direction,
             board,
+            speed_buttons,
             start_button,
         })
     }
@@ -460,7 +490,11 @@ impl EventHandler for Mainstate {
             DrawParam::default(),
         )?;
         self.food.draw(ctx, _quad_ctx);
-        self.start_button.draw_button_with_text(ctx, _quad_ctx);
+        for  i in 0..(self.speed_buttons.len()){
+            self.speed_buttons[i].draw_button_with_text(ctx, _quad_ctx);
+        
+        }
+        self.start_button.draw_mesh(ctx, _quad_ctx);
         graphics::present(ctx, _quad_ctx)?;
         Ok(())
     }
@@ -473,9 +507,10 @@ impl EventHandler for Mainstate {
     //     _x: f32,
     //     _y: f32,
     // ) {
+
     //     let bottum_value = vec![
-    //         // Grid::gridposition(self.start_button.button_bouds[0][0]),
-    //         // Grid::gridposition(self.start_button.button_bouds[0][1]),
+    //         Grid::gridposition(self.start_button.button_bouds[0][0]),
+    //         Grid::gridposition(self.start_button.button_bouds[0][1]),
     //     ];
     //     let top_value = vec![
     //         Grid::gridposition(self.start_button.button_bouds[1][0]),
